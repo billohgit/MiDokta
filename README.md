@@ -221,8 +221,8 @@ All use the password `Password123!`.
 
 1. Import the repository at [vercel.com/new](https://vercel.com/new). The build command
    (`prisma generate && next build`) and output are picked up from `package.json`.
-2. Add **Storage → Postgres** to the project. It exposes a pooled and a direct connection
-   string; map them to the two database variables below.
+2. Provision Postgres (see below). It gives you a pooled and a direct connection string;
+   map them to the two database variables in the table.
 3. Add **Storage → Blob**. This sets `BLOB_READ_WRITE_TOKEN` automatically.
 4. Set the remaining environment variables under Settings → Environment Variables:
 
@@ -247,6 +247,23 @@ All use the password `Password123!`.
    ```bash
    DATABASE_URL="<direct url>" DIRECT_DATABASE_URL="<direct url>" npm run db:push
    ```
+
+### Postgres: Vercel or Neon
+
+Either works — the app only needs two standard PostgreSQL connection strings, so nothing in
+the code changes between them. Vercel Postgres is itself provisioned through Neon, so the
+choice is about where the database is billed and managed, not about compatibility.
+
+- **Vercel** — Storage → Postgres in the project. Pick the Neon option in the marketplace.
+  Connection strings are injected into the project automatically, but under Vercel's own
+  names, so copy them across to `DATABASE_URL` and `DIRECT_DATABASE_URL`.
+- **Neon directly** — create a project at [neon.tech](https://neon.tech) and copy both strings
+  from the dashboard. Use this if Vercel's marketplace flow fails, if the database should
+  outlive the Vercel project, or to keep the database on a separate account from hosting.
+
+Whichever you use, the pooled string is the one with `-pooler` in the host (Neon) or
+`?pgbouncer=true` appended, and the direct string is the one without. Getting these the wrong
+way round produces connection-pool exhaustion under load and migrations that hang.
 
 ### Storage note
 
