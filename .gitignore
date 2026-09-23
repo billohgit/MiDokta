@@ -11,3 +11,8 @@ uploads
 !.env.example
 
 .env*
+
+# Agent tooling written by the Neon integration; regenerated on demand.
+.agents
+.claude
+skills-lock.json
