@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { type LoginState, login } from "@/app/actions/auth";
 
@@ -9,19 +10,24 @@ export default function LoginForm() {
   const [state, action, pending] = useActionState(login, initial);
 
   return (
-    <form action={action} className="login-form">
-      <label className="field">
-        <span>Email</span>
-        <input type="email" name="email" autoComplete="email" defaultValue={state.email} required autoFocus />
-      </label>
-      <label className="field">
-        <span>Password</span>
-        <input type="password" name="password" autoComplete="current-password" required />
-      </label>
-      {state.error && <p className="form-error">{state.error}</p>}
-      <button type="submit" className="btn btn-primary" disabled={pending}>
-        {pending ? "Signing in..." : "Sign In"}
-      </button>
-    </form>
+    <>
+      <form action={action} className="login-form">
+        <label className="field">
+          <span>Email</span>
+          <input type="email" name="email" autoComplete="email" defaultValue={state.email} required autoFocus />
+        </label>
+        <label className="field">
+          <span>Password</span>
+          <input type="password" name="password" autoComplete="current-password" required />
+        </label>
+        {state.error && <p className="form-error">{state.error}</p>}
+        <button type="submit" className="btn btn-primary" disabled={pending}>
+          {pending ? "Signing in..." : "Sign In"}
+        </button>
+      </form>
+      <p className="login-alt">
+        Don&apos;t have an account? <Link href="/signup">Create one</Link>
+      </p>
+    </>
   );
 }

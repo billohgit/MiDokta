@@ -14,6 +14,9 @@ export const STAFF_PORTAL_ROLES: Role[] = ["NURSE", "PHARMACIST", "RECEPTIONIST"
 /** Every role with a portal to sign in to. Everyone else (patients) takes part by SMS only. */
 export const PORTAL_ROLES: Role[] = ["ADMIN", "DOCTOR", ...STAFF_PORTAL_ROLES];
 
+/** Roles people may pick when creating their own account. Admins are only made by other admins. */
+export const SIGNUP_ROLES = ["DOCTOR", "NURSE", "PHARMACIST", "RECEPTIONIST"] as const satisfies readonly Role[];
+
 /** Runs the front desk: scheduling, registering patients, invoicing and taking payments. */
 export const FRONT_DESK_ROLES: Role[] = ["ADMIN", "RECEPTIONIST"];
 

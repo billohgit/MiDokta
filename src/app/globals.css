@@ -603,6 +603,11 @@ button { font: inherit; border: none; background: none; cursor: pointer; color: 
 .login-sub { color: var(--muted); margin: 4px 0 24px; }
 .login-form { display: flex; flex-direction: column; gap: 16px; }
 .login-form .btn { height: 48px; margin-top: 4px; }
+.login-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.login-alt { margin-top: 20px; text-align: center; color: var(--muted); font-size: 14px; }
+.login-alt a { color: #d32f2f; font-weight: 600; }
+.login-btn { display: flex; align-items: center; justify-content: center; height: 48px; text-decoration: none; }
+@media (max-width: 420px) { .login-row { grid-template-columns: 1fr; } }
 
 /* ---------- Doctors (admin) ---------- */
 .doctor-grid {
