@@ -5,3 +5,9 @@ out
 *.tsbuildinfo
 next-env.d.ts
 uploads
+
+.vercel
+.env*
+!.env.example
+
+.env*
