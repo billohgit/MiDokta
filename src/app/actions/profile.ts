@@ -1,13 +1,11 @@
 "use server";
 
-import { mkdir, unlink, writeFile } from "fs/promises";
-import path from "path";
 import { revalidatePath } from "next/cache";
 import { Gender, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { authorize } from "@/lib/auth";
 import { PHONE_HINT, checkbox, phoneValue } from "@/lib/form";
-import { AVATAR_DIR, AVATAR_TYPES } from "@/lib/uploads";
+import { AVATAR_TYPES, deleteAvatar, saveAvatar } from "@/lib/uploads";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -79,15 +77,13 @@ export async function uploadAvatar(formData: FormData): Promise<ActionResult> {
   if (!ext) return { ok: false, error: "Use a JPG, PNG or WebP image." };
   if (file.size > MAX_AVATAR_BYTES) return { ok: false, error: "Image must be 2 MB or smaller." };
 
-  await mkdir(AVATAR_DIR, { recursive: true });
-  const filename = `${user.id}-${Date.now()}.${ext}`;
-  await writeFile(path.join(AVATAR_DIR, filename), Buffer.from(await file.arrayBuffer()));
+  const avatarUrl = await saveAvatar(`${user.id}-${Date.now()}.${ext}`, file);
 
-  // Remove the previous upload, if it was one of ours.
-  const previous = user.avatarUrl?.match(/^\/api\/uploads\/avatars\/([\w-]+\.\w+)$/)?.[1];
-  if (previous) await unlink(path.join(AVATAR_DIR, previous)).catch(() => {});
+  await prisma.user.update({ where: { id: user.id }, data: { avatarUrl } });
 
-  await prisma.user.update({ where: { id: user.id }, data: { avatarUrl: `/api/uploads/avatars/${filename}` } });
+  // Drop the previous upload only once the new one is recorded, so a failure here cannot
+  // leave the user pointing at a file we already removed.
+  await deleteAvatar(user.avatarUrl);
 
   revalidatePath("/", "layout");
   return { ok: true };

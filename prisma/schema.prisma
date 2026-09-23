@@ -4,7 +4,10 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Serverless runtimes open a connection per invocation, so DATABASE_URL points at the
+  // pooler. Migrations need a direct connection, which the pooler cannot serve.
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 enum Role {

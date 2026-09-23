@@ -189,6 +189,7 @@ Billing currency is set in `src/lib/money.ts` (default `SLE`).
 
 1. Create a PostgreSQL database and fill in `.env` (see `.env.example`):
    - `DATABASE_URL` — connection string
+   - `DIRECT_DATABASE_URL` — same value locally; a direct (non-pooled) connection in production
    - `SESSION_SECRET` — long random string used to sign login sessions
 2. Install and prepare the database:
 
@@ -215,6 +216,45 @@ All use the password `Password123!`.
 | Receptionist | `mohamed.jalloh@midokta.test`  |
 | Nurse        | `aminata.turay@midokta.test`   |
 | Pharmacist   | `mary.sesay@midokta.test`      |
+
+## Deployment (Vercel)
+
+1. Import the repository at [vercel.com/new](https://vercel.com/new). The build command
+   (`prisma generate && next build`) and output are picked up from `package.json`.
+2. Add **Storage → Postgres** to the project. It exposes a pooled and a direct connection
+   string; map them to the two database variables below.
+3. Add **Storage → Blob**. This sets `BLOB_READ_WRITE_TOKEN` automatically.
+4. Set the remaining environment variables under Settings → Environment Variables:
+
+   | Variable | Value |
+   | --- | --- |
+   | `DATABASE_URL` | pooled Postgres URL (`?pgbouncer=true`) |
+   | `DIRECT_DATABASE_URL` | direct/non-pooling Postgres URL |
+   | `SESSION_SECRET` | fresh random string — do not reuse the development one |
+   | `CRON_SECRET` | fresh random string |
+   | `SMS_WEBHOOK_SECRET` | fresh random string |
+   | `APP_URL` | the deployed origin, e.g. `https://midokta.vercel.app` |
+   | SMS provider keys | whichever of the `SMSGATE_*`, `TWILIO_*` or `AT_*` set is in use |
+
+   Generate each secret with:
+
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+   ```
+
+5. Create the tables against the **direct** connection, then seed if this is a fresh database:
+
+   ```bash
+   DATABASE_URL="<direct url>" DIRECT_DATABASE_URL="<direct url>" npm run db:push
+   ```
+
+### Storage note
+
+Profile photos go to Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set, and to `./uploads` on
+local disk otherwise — serverless filesystems are read-only, so the local path cannot be used
+in production. Blobs are stored with public URLs carrying a random suffix, matching how
+`/api/uploads/avatars/[file]` already served them. If patient photos need to be restricted to
+signed-in users, they would have to move to private blobs read back through a route handler.
 
 ## Structure
 
