@@ -1,0 +1,8 @@
+# Never upload local files with the `vercel` CLI: local uploads hold avatars and identity
+# documents, and env files hold secrets (Vercel's own environment settings are used instead).
+uploads
+.env
+.env.*
+!.env.example
+node_modules
+.next
