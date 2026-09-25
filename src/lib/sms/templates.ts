@@ -56,6 +56,9 @@ const templates = {
   patientReminder: (p: Person, a: Appt, doctor?: Person | null, hospital?: string | null) =>
     `${SMS_BRAND}: Reminder, ${p.firstName}: you have an appointment with ${drName(doctor)} on ${when(a.startsAt)}${where(a, hospital)}.`,
 
+  videoCallLink: (p: Person, doctor: Person | null | undefined, link: string) =>
+    `${SMS_BRAND}: Hi ${p.firstName}, ${drName(doctor)} is ready for your video call. Join on your phone here: ${link}`,
+
   followUpReminder: (p: Person, date: Date, doctor?: Person | null) =>
     `${SMS_BRAND}: Hi ${p.firstName}, your follow-up with ${drName(doctor)} is due on ${smsDate(date)}. Please contact us to book a visit.`,
 

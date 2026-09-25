@@ -1,5 +1,6 @@
 import { Role } from "@prisma/client";
 import PortalShell from "@/components/PortalShell";
+import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { topbarUser } from "@/lib/people";
 import { unreadMessageCount } from "@/lib/chat";
@@ -12,6 +13,7 @@ const NAV = [
   { href: "/admin/patients", label: "Patients", icon: "fa-bed-pulse" },
   { href: "/admin/doctors", label: "Doctors", icon: "fa-user-doctor" },
   { href: "/admin/staff", label: "Staff", icon: "fa-users" },
+  { href: "/admin/verifications", label: "Verification", icon: "fa-id-card" },
   { href: "/admin/hospitals", label: "Hospitals", icon: "fa-hospital" },
   { href: "/admin/inventory", label: "Pharmacy", icon: "fa-boxes-stacked" },
   { href: "/admin/billing", label: "Billing", icon: "fa-file-invoice-dollar" },
@@ -22,10 +24,19 @@ const NAV = [
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireUser(Role.ADMIN);
-  const chatUnread = await unreadMessageCount(admin.id);
+  const [chatUnread, awaitingApproval] = await Promise.all([
+    unreadMessageCount(admin.id),
+    prisma.user.count({ where: { isActive: false, verificationStatus: { not: null } } }),
+  ]);
 
   return (
-    <PortalShell nav={NAV} basePath="/admin" initialChatUnread={chatUnread} user={topbarUser(admin)}>
+    <PortalShell
+      nav={NAV}
+      basePath="/admin"
+      initialChatUnread={chatUnread}
+      badges={{ "/admin/verifications": awaitingApproval }}
+      user={topbarUser(admin)}
+    >
       {children}
     </PortalShell>
   );

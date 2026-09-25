@@ -1,5 +1,10 @@
+import { COUNTRIES } from "@/lib/countries";
+
 /** Country calling code used for local numbers such as "076 123456" (default: Sierra Leone). */
 export const DEFAULT_COUNTRY_CODE = (process.env.SMS_DEFAULT_COUNTRY_CODE ?? "232").replace(/\D/g, "");
+
+/** The country preselected in phone inputs (ISO code), matching DEFAULT_COUNTRY_CODE. */
+export const DEFAULT_COUNTRY = COUNTRIES.find((c) => c.code === DEFAULT_COUNTRY_CODE)?.iso ?? "SL";
 
 /**
  * Normalises a phone number to E.164 (e.g. "+23276123456"), or returns null if it can't be.

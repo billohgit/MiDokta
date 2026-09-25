@@ -5,12 +5,19 @@ import { usePathname } from "next/navigation";
 import Sidebar, { type NavItem } from "./Sidebar";
 import Topbar, { type TopbarUser } from "./Topbar";
 
-/** `basePath` is the portal root, e.g. "/admin". */
-type Props = { nav: NavItem[]; basePath: string; user: TopbarUser; initialChatUnread: number; children: React.ReactNode };
+/** `basePath` is the portal root, e.g. "/admin". `badges` adds counts to other nav items, keyed by href. */
+type Props = {
+  nav: NavItem[];
+  basePath: string;
+  user: TopbarUser;
+  initialChatUnread: number;
+  badges?: Record<string, number>;
+  children: React.ReactNode;
+};
 
 const CHAT_UNREAD_POLL_MS = 15_000;
 
-export default function PortalShell({ nav, basePath, user, initialChatUnread, children }: Props) {
+export default function PortalShell({ nav, basePath, user, initialChatUnread, badges, children }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -45,7 +52,7 @@ export default function PortalShell({ nav, basePath, user, initialChatUnread, ch
     <div className={`layout${collapsed ? " collapsed" : ""}${mobileOpen ? " mobile-open" : ""}`}>
       <Sidebar
         nav={nav}
-        badges={{ [`${basePath}/chat`]: chatUnread }}
+        badges={{ ...badges, [`${basePath}/chat`]: chatUnread }}
         pathname={pathname}
         onNavigate={() => setMobileOpen(false)}
       />

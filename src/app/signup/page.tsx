@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { PORTAL_HOME, getSessionUser } from "@/lib/auth";
 import Logo from "@/components/Logo";
+import { DEFAULT_COUNTRY } from "@/lib/sms/phone";
 import SignupForm from "./SignupForm";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function SignupPage() {
         <div className="login-brand">
           <Logo stacked tagline />
         </div>
-        <SignupForm />
+        <SignupForm defaultCountry={DEFAULT_COUNTRY} />
       </div>
     </main>
   );

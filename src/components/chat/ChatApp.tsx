@@ -6,6 +6,7 @@ import { markConversationRead, sendMessage } from "@/app/actions/chat";
 import Avatar from "@/components/appointments/Avatar";
 import NewChatModal from "./NewChatModal";
 import GroupInfoPanel from "./GroupInfoPanel";
+import ChatCallButton from "@/components/video/ChatCallButton";
 import {
   type ChatMessage,
   type ChatUser,
@@ -424,6 +425,9 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
             {subtitle}
           </small>
         </div>
+        {me.role === "DOCTOR" && !conversation.isGroup && other?.role === "PATIENT" && (
+          <ChatCallButton patientId={other.id} name={`${other.firstName} ${other.lastName}`} />
+        )}
         {conversation.isGroup && (
           <button className="icon-btn" onClick={onToggleInfo} aria-label="Group info" title="Group info">
             <i className="fa-solid fa-circle-info" />

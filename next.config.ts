@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
-    // Allow profile photo uploads (up to 2 MB) through server actions.
-    serverActions: { bodySizeLimit: "3mb" },
+    // Allow image uploads through server actions: sign-up sends a photo and an ID card (2 MB each).
+    serverActions: { bodySizeLimit: "5mb" },
   },
 };
 

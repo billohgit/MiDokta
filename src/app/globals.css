@@ -603,11 +603,50 @@ button { font: inherit; border: none; background: none; cursor: pointer; color: 
 .login-sub { color: var(--muted); margin: 4px 0 24px; }
 .login-form { display: flex; flex-direction: column; gap: 16px; }
 .login-form .btn { height: 48px; margin-top: 4px; }
+.login-method { display: flex; }
+.login-method button { flex: 1; }
+.phone-input { display: flex; gap: 8px; }
+.phone-input input { flex: 1; min-width: 0; }
+/* Native select for the dropdown, with a compact "SL +232" label drawn underneath it. */
+.country-select { position: relative; flex: none; }
+.country-select span {
+  display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px;
+  border: 1px solid #ced4da; border-radius: 6px; background: #fff;
+  font-size: 15px; font-weight: 500; white-space: nowrap;
+}
+.country-select span i { font-size: 11px; color: var(--muted); }
+.field .country-select select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; padding: 0; }
+.country-select:focus-within span { border-color: #d32f2f; }
 .login-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .login-alt { margin-top: 20px; text-align: center; color: var(--muted); font-size: 14px; }
 .login-alt a { color: #d32f2f; font-weight: 600; }
 .login-btn { display: flex; align-items: center; justify-content: center; height: 48px; text-decoration: none; }
 @media (max-width: 420px) { .login-row { grid-template-columns: 1fr; } }
+/* Grid items won't shrink below an input's intrinsic width without this. */
+.login-row .field { min-width: 0; }
+.login-row .field input { width: 100%; min-width: 0; }
+.form-note { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.form-note i { margin-right: 4px; }
+
+/* ---------- Image capture (sign-up photo / ID scan) ---------- */
+.capture {
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  border: 1px dashed #ced4da; border-radius: 8px; background: #f8f9fa;
+}
+.capture-face { aspect-ratio: 4 / 3; }
+.capture-card { aspect-ratio: 1.586; } /* ID-1 card proportions */
+.capture.has-image { border-style: solid; background: #000; }
+.capture img { width: 100%; height: 100%; object-fit: contain; }
+.capture-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; text-align: center; color: var(--muted); font-weight: 400; }
+.capture-empty i { font-size: 34px; opacity: 0.6; }
+.capture-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.capture-remove { background: none; color: #b71c1c; }
+.camera { position: relative; overflow: hidden; border-radius: 8px; background: #000; aspect-ratio: 4 / 3; }
+.camera video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.camera-guide { position: absolute; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45); border: 3px solid #fff; }
+.camera-card .camera-guide { left: 8%; right: 8%; top: 50%; aspect-ratio: 1.586; transform: translateY(-50%); border-radius: 12px; }
+.camera-face .camera-guide { left: 50%; top: 50%; width: 46%; aspect-ratio: 3 / 4; transform: translate(-50%, -50%); border-radius: 50%; }
+.camera-tip { color: var(--muted); font-size: 14px; margin: 12px 0; }
 
 /* ---------- Doctors (admin) ---------- */
 .doctor-grid {
@@ -1202,3 +1241,54 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
   .detail-row { gap: 4px; min-height: 0; padding: 10px 0; }
   .detail-label, .detail-value { font-size: 16px; }
 }
+
+/* ---------- Account verification (admin) ---------- */
+.verify-list { display: flex; flex-direction: column; gap: 18px; }
+.verify-card { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.verify-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.verify-head h3 { font-size: 19px; font-weight: 600; }
+.verify-head .status-pill i { margin-right: 4px; }
+.verify-images { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.verify-images figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.verify-images img, .verify-missing {
+  width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #f1f3f5; border-radius: 8px; display: block;
+}
+.verify-missing { display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.verify-images figcaption { font-size: 13px; color: var(--muted); text-align: center; }
+.verify-summary { font-weight: 500; margin-bottom: 12px; }
+.verify-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 14px; }
+.verify-facts dt { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.verify-facts dd { margin: 2px 0 0; font-weight: 500; overflow-wrap: anywhere; }
+.verify-checks { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.verify-checks li { display: flex; gap: 10px; align-items: flex-start; }
+.verify-checks li i { margin-top: 3px; }
+.verify-checks li div { display: flex; flex-direction: column; }
+.verify-checks small { color: var(--muted); }
+.status-muted { background: #e9ecef; color: #495057; }
+.check-pass { color: #3d7a0c; }
+.check-fail { color: #b71c1c; }
+.check-unclear { color: #8a6300; }
+.verify-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
+.verify-actions .form-error { margin-right: auto; }
+@media (max-width: 600px) { .verify-images { grid-template-columns: 1fr; } }
+
+/* ---------- Video calls ---------- */
+.call-page { display: flex; flex-direction: column; gap: 16px; }
+.call-head { display: flex; flex-direction: column; gap: 6px; }
+.call-link { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; }
+.call-link-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.call-link-row input {
+  flex: 1; min-width: 200px; height: 34px; padding: 0 10px; border: 1px solid #ced4da; border-radius: 6px;
+  font: inherit; font-size: 13px; font-weight: 400; color: var(--muted); background: #f8f9fa;
+}
+.call-note { color: var(--muted); font-weight: 400; }
+.call-frame { width: 100%; height: calc(100vh - 290px); min-height: 420px; border: 0; padding: 0; overflow: hidden; }
+.call-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.patient-call { display: flex; flex-direction: column; height: 100vh; height: 100dvh; background: #111; }
+.patient-call-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; background: #fff; }
+.patient-call-head span { font-weight: 600; color: var(--muted); }
+.patient-call iframe { flex: 1; width: 100%; border: 0; }
+.call-notice h1 { font-size: 24px; }
+.chat-call-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; }
+.chat-call-error { max-width: 220px; text-align: right; }
+@media (max-width: 600px) { .chat-call-btn span { display: none; } }

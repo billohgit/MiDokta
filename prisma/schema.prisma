@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Serverless runtimes open a connection per invocation, so DATABASE_URL points at the
   // pooler. Migrations need a direct connection, which the pooler cannot serve.
   url       = env("DATABASE_URL")
@@ -17,6 +17,14 @@ enum Role {
   PHARMACIST
   RECEPTIONIST
   PATIENT
+}
+
+/// Outcome of the automatic identity check run on self-service sign-ups.
+enum VerificationStatus {
+  PENDING
+  PASSED
+  FLAGGED
+  ERROR
 }
 
 enum Gender {
@@ -106,13 +114,13 @@ model Hospital {
 }
 
 model User {
-  id                    String    @id @default(cuid())
+  id                    String              @id @default(cuid())
   firstName             String
   lastName              String
-  email                 String    @unique
+  email                 String              @unique
   phone                 String?
   avatarUrl             String?
-  dateOfBirth           DateTime? @db.Date
+  dateOfBirth           DateTime?           @db.Date
   gender                Gender?
   address               String?
   city                  String?
@@ -131,14 +139,20 @@ model User {
   emergencyContactName  String?
   emergencyContactPhone String?
   /// Consent to receive SMS notifications on `phone`.
-  smsOptIn              Boolean   @default(true)
-  isActive              Boolean   @default(true)
+  smsOptIn              Boolean             @default(true)
+  isActive              Boolean             @default(true)
+  // Identity verification for self-service sign-ups. The ID card is stored privately.
+  idCardUrl             String?
+  verificationStatus    VerificationStatus?
+  /// The checker's findings, shown to admins (see src/lib/verification.ts).
+  verificationReport    Json?
+  verificationCheckedAt DateTime?
   password              String
   role                  Role
   hospitalId            String?
-  hospital              Hospital? @relation(fields: [hospitalId], references: [id])
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  hospital              Hospital?           @relation(fields: [hospitalId], references: [id])
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
 
   doctorAppointments  Appointment[]             @relation("DoctorAppointments")
   patientAppointments Appointment[]             @relation("PatientAppointments")
@@ -158,21 +172,26 @@ model User {
 }
 
 model Appointment {
-  id         String            @id @default(cuid())
-  title      String
-  notes      String?
-  startsAt   DateTime
-  endsAt     DateTime?
-  status     AppointmentStatus @default(PENDING)
-  visitType  VisitType         @default(IN_PERSON)
-  doctorId   String?
-  doctor     User?             @relation("DoctorAppointments", fields: [doctorId], references: [id])
-  patientId  String
-  patient    User              @relation("PatientAppointments", fields: [patientId], references: [id])
-  hospitalId String?
-  hospital   Hospital?         @relation(fields: [hospitalId], references: [id])
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  id                 String            @id @default(cuid())
+  title              String
+  notes              String?
+  startsAt           DateTime
+  endsAt             DateTime?
+  status             AppointmentStatus @default(PENDING)
+  visitType          VisitType         @default(IN_PERSON)
+  // Video visits: the Daily room, and the secret in the patient's join link (/call/<key>).
+  videoRoomName      String?
+  videoRoomUrl       String?
+  videoRoomExpiresAt DateTime?
+  videoPatientKey    String?           @unique
+  doctorId           String?
+  doctor             User?             @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  patientId          String
+  patient            User              @relation("PatientAppointments", fields: [patientId], references: [id])
+  hospitalId         String?
+  hospital           Hospital?         @relation(fields: [hospitalId], references: [id])
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   record   MedicalRecord?
   invoices Invoice[]
