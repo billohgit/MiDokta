@@ -3,6 +3,10 @@
 import { useRef, useState, useTransition } from "react";
 import type { Gender, Role } from "@prisma/client";
 import { updateProfile, uploadAvatar } from "@/app/actions/profile";
+import { shrinkUpload } from "@/components/ui/ImageCapture";
+
+/** Avatars are shown at most a couple of hundred pixels wide. */
+const AVATAR_SIDE = 512;
 
 export type Profile = {
   firstName: string;
@@ -96,13 +100,25 @@ export default function ProfileSettings({ profile }: { profile: Profile }) {
 
   const onPhotoChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const data = new FormData();
-    data.append("avatar", file);
     startUploading(async () => {
-      const result = await uploadAvatar(data);
-      setMessage(result.ok ? { type: "success", text: "Photo updated." } : { type: "error", text: result.error });
-      if (fileRef.current) fileRef.current.value = "";
+      // Phone photos are several MB and often HEIC, so re-encode to a small JPEG before sending.
+      let photo: File;
+      try {
+        photo = await shrinkUpload(file, "avatar.jpg", AVATAR_SIDE);
+      } catch {
+        setMessage({ type: "error", text: "That file couldn't be read as an image. Try a JPEG or PNG." });
+        return;
+      }
+      const data = new FormData();
+      data.append("avatar", photo);
+      try {
+        const result = await uploadAvatar(data);
+        setMessage(result.ok ? { type: "success", text: "Photo updated." } : { type: "error", text: result.error });
+      } catch {
+        setMessage({ type: "error", text: "Couldn't upload the photo. Check your connection and try again." });
+      }
     });
   };
 
@@ -135,7 +151,7 @@ export default function ProfileSettings({ profile }: { profile: Profile }) {
           >
             <i className={`fa-solid ${uploading ? "fa-spinner fa-spin" : "fa-camera"}`} />
           </button>
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onPhotoChosen} />
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPhotoChosen} />
         </div>
         <div>
           <h2 className="profile-name">{fullName}</h2>

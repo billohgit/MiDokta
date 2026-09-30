@@ -896,6 +896,8 @@ a.person-cell:hover span { color: var(--primary); }
   display: grid;
   grid-template-columns: 340px 1fr;
   height: calc(100vh - 150px);
+  /* dvh tracks mobile browser toolbars; plain vh would put the composer under Safari's bar. */
+  height: calc(100dvh - 150px);
   min-height: 480px;
   overflow: hidden;
 }
@@ -1216,7 +1218,9 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
   .welcome-name { font-size: 22px; }
   .full-hide { display: none; }
   .sms-action.align-end { align-items: flex-start; text-align: left; }
-  .chat { grid-template-columns: 1fr; height: calc(100vh - 110px); }
+  .chat { grid-template-columns: 1fr; height: calc(100vh - 110px); height: calc(100dvh - 110px); min-height: 360px; }
+  /* Under 16px, iOS Safari zooms the page on focus and the send button slides off screen. */
+  .composer textarea { font-size: 16px; }
   .chat .chat-thread { display: none; }
   .chat.show-thread .chat-list { display: none; }
   .chat.show-thread .chat-thread { display: flex; }

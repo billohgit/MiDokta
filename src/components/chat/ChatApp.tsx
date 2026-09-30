@@ -349,7 +349,12 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
   };
 
   const deliver = async (temp: ChatMessage) => {
-    const result = await sendMessage(conversation.id, temp.body, alsoSms);
+    // A dropped connection rejects rather than returning a result; treat it as a failed send so the
+    // bubble offers a retry instead of staying on "sending".
+    const result = await sendMessage(conversation.id, temp.body, alsoSms).catch(() => ({
+      ok: false as const,
+      error: "Couldn't send. Check your connection and tap retry.",
+    }));
     setMessages((list) => {
       if (!result.ok) return list.map((m) => (m.id === temp.id ? { ...m, status: "failed" as const } : m));
       const rest = list.filter((m) => m.id !== temp.id);

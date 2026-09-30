@@ -17,8 +17,15 @@ type Props = {
 };
 
 /** Draws a source onto a canvas no larger than MAX_SIDE and encodes it as JPEG. */
-async function toJpeg(source: CanvasImageSource, width: number, height: number, name: string, mirror = false) {
-  const scale = Math.min(1, MAX_SIDE / Math.max(width, height));
+async function toJpeg(
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+  name: string,
+  mirror = false,
+  maxSide = MAX_SIDE
+) {
+  const scale = Math.min(1, maxSide / Math.max(width, height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(width * scale);
   canvas.height = Math.round(height * scale);
@@ -33,10 +40,11 @@ async function toJpeg(source: CanvasImageSource, width: number, height: number, 
   return new File([blob], name, { type: "image/jpeg" });
 }
 
-async function shrinkUpload(file: File, name: string) {
+/** Re-encodes a chosen file (any format the browser can decode, e.g. an iPhone HEIC) as a small JPEG. */
+export async function shrinkUpload(file: File, name: string, maxSide = MAX_SIDE) {
   const bitmap = await createImageBitmap(file);
   try {
-    return await toJpeg(bitmap, bitmap.width, bitmap.height, name);
+    return await toJpeg(bitmap, bitmap.width, bitmap.height, name, false, maxSide);
   } finally {
     bitmap.close();
   }
