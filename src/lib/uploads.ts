@@ -18,6 +18,14 @@ export const AVATAR_TYPES: Record<string, string> = {
 // token is configured and fall back to local disk for development.
 const useBlobStore = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
+// A Blob store is either public or private for good, so identity documents need a second,
+// private store. Connect it to the project with the env var prefix BLOB_PRIVATE.
+const privateToken = () => {
+  const token = process.env.BLOB_PRIVATE_READ_WRITE_TOKEN;
+  if (!token) throw new Error("BLOB_PRIVATE_READ_WRITE_TOKEN is not set: identity documents need a private Blob store.");
+  return token;
+};
+
 const LOCAL_AVATAR = /^\/api\/uploads\/avatars\/([\w-]+\.\w+)$/;
 
 /** Stores the image and returns the URL to record on the user. */
@@ -62,6 +70,7 @@ export async function saveIdCard(filename: string, file: File): Promise<string> 
       access: "private",
       contentType: file.type,
       addRandomSuffix: true,
+      token: privateToken(),
     });
     return url;
   }
@@ -83,7 +92,7 @@ export async function readIdCard(ref: string): Promise<{ data: Buffer; contentTy
   }
 
   if (!useBlobStore() || !ref.startsWith("https://")) return null;
-  const result = await get(ref, { access: "private" });
+  const result = await get(ref, { access: "private", token: privateToken() });
   if (result?.statusCode !== 200) return null;
   const data = Buffer.from(await new Response(result.stream).arrayBuffer());
   return { data, contentType: result.blob.contentType ?? "image/jpeg" };
@@ -96,7 +105,7 @@ export async function deleteIdCard(ref: string | null | undefined): Promise<void
     await unlink(path.join(ID_CARD_DIR, local)).catch(() => {});
     return;
   }
-  if (useBlobStore() && ref.startsWith("https://")) await del(ref).catch(() => {});
+  if (useBlobStore() && ref.startsWith("https://")) await del(ref, { token: privateToken() }).catch(() => {});
 }
 
 /** The bytes of a stored avatar (local or Vercel Blob), for server-side processing. */

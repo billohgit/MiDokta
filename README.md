@@ -223,7 +223,9 @@ All use the password `Password123!`.
    (`prisma generate && next build`) and output are picked up from `package.json`.
 2. Provision Postgres (see below). It gives you a pooled and a direct connection string;
    map them to the two database variables in the table.
-3. Add **Storage → Blob**. This sets `BLOB_READ_WRITE_TOKEN` automatically.
+3. Add **Storage → Blob** with **public** access. This sets `BLOB_READ_WRITE_TOKEN` automatically.
+   Add a second Blob store with **private** access for identity documents, and connect it with
+   the environment variable prefix `BLOB_PRIVATE` so it sets `BLOB_PRIVATE_READ_WRITE_TOKEN`.
 4. Set the remaining environment variables under Settings → Environment Variables:
 
    | Variable | Value |
@@ -272,6 +274,8 @@ local disk otherwise — serverless filesystems are read-only, so the local path
 in production. Blobs are stored with public URLs carrying a random suffix, matching how
 `/api/uploads/avatars/[file]` already served them. If patient photos need to be restricted to
 signed-in users, they would have to move to private blobs read back through a route handler.
+Identity documents already work that way: they live in the private store and are only read
+back through an admin-only route.
 
 ## Structure
 

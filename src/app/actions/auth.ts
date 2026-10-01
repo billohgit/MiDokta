@@ -123,7 +123,10 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
 
   const fileId = randomUUID();
   const avatarUrl = await saveAvatar(`${fileId}.${AVATAR_TYPES[photo.type]}`, photo);
-  const idCardUrl = await saveIdCard(`${fileId}.${AVATAR_TYPES[idCard.type]}`, idCard);
+  const idCardUrl = await saveIdCard(`${fileId}.${AVATAR_TYPES[idCard.type]}`, idCard).catch(async (e) => {
+    await deleteAvatar(avatarUrl);
+    throw e;
+  });
 
   let user;
   try {
