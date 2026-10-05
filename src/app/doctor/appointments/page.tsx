@@ -13,11 +13,20 @@ export default async function DoctorAppointmentsPage() {
   const [appointments, patients] = await Promise.all([
     prisma.appointment.findMany({
       // Own appointments, plus unassigned requests any doctor can accept.
-      where: { OR: [{ doctorId: doctor.id }, { doctorId: null, status: "PENDING" }] },
+      where: {
+        OR: [{ doctorId: doctor.id }, { doctorId: null, status: "PENDING" }],
+      },
       orderBy: { startsAt: "asc" },
-      include: { patient: { select: personSelect }, doctor: { select: personSelect } },
+      include: {
+        patient: { select: personSelect },
+        doctor: { select: personSelect },
+      },
     }),
-    prisma.user.findMany({ where: { role: Role.PATIENT, isActive: true }, select: personSelect, orderBy: { firstName: "asc" } }),
+    prisma.user.findMany({
+      where: { role: Role.PATIENT, isActive: true },
+      select: personSelect,
+      orderBy: { firstName: "asc" },
+    }),
   ]);
 
   return (
