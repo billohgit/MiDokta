@@ -1,9 +1,9 @@
 import "server-only";
 
 import { randomBytes } from "crypto";
-import { headers } from "next/headers";
 import type { Appointment } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { appBaseUrl } from "@/lib/url";
 
 /**
  * Video visits run on Daily (daily.co). Each video appointment gets a private room; nobody can
@@ -34,7 +34,7 @@ async function daily<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-const hasLiveRoom = (a: Pick<Appointment, "videoRoomUrl" | "videoRoomExpiresAt">) =>
+export const hasLiveRoom = (a: Pick<Appointment, "videoRoomUrl" | "videoRoomExpiresAt">) =>
   Boolean(a.videoRoomUrl && a.videoRoomExpiresAt && a.videoRoomExpiresAt.getTime() > Date.now());
 
 /** Creates the appointment's room (or a fresh one if the last expired) and its patient link key. */
@@ -88,12 +88,33 @@ export async function joinUrl(
   return `${appt.videoRoomUrl}?t=${encodeURIComponent(token)}`;
 }
 
-/** The public link the patient opens to join. Uses APP_URL, else the current request's host. */
+/** The public link the patient opens to join. */
 export async function patientLink(key: string): Promise<string> {
-  let base = process.env.APP_URL?.replace(/\/+$/, "");
-  if (!base) {
-    const h = await headers();
-    base = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
-  }
-  return `${base}/call/${key}`;
+  return `${await appBaseUrl()}/call/${key}`;
+}
+
+/**
+ * Gives a video appointment its patient link key without opening a room, so the link can go out
+ * with the confirmation text and the patient can start the call from it at appointment time.
+ */
+export async function ensurePatientKey(id: string): Promise<string> {
+  const key = randomBytes(24).toString("base64url");
+  await prisma.appointment.updateMany({ where: { id, videoPatientKey: null }, data: { videoPatientKey: key } });
+  const appt = await prisma.appointment.findUniqueOrThrow({ where: { id }, select: { videoPatientKey: true } });
+  return appt.videoPatientKey!;
+}
+
+/** The patient's call link for a video appointment (creating its key), or null for in-person visits. */
+export async function videoCallLinkFor(appt: Pick<Appointment, "id" | "visitType">): Promise<string | null> {
+  return appt.visitType === "VIDEO_CALL" ? patientLink(await ensurePatientKey(appt.id)) : null;
+}
+
+/** Patients may open the room themselves from this long before the start time until the room grace ends. */
+const PATIENT_START_BEFORE_MS = 15 * 60 * 1000;
+
+/** Whether a patient may start the call now: "early", "open", or "late". */
+export function patientStartWindow(startsAt: Date, now = Date.now()): "early" | "open" | "late" {
+  if (now < startsAt.getTime() - PATIENT_START_BEFORE_MS) return "early";
+  if (now > startsAt.getTime() + ROOM_GRACE_MS) return "late";
+  return "open";
 }

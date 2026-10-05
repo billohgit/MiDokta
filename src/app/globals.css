@@ -1296,3 +1296,18 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
 .chat-call-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; }
 .chat-call-error { max-width: 220px; text-align: right; }
 @media (max-width: 600px) { .chat-call-btn span { display: none; } }
+
+/* ---- Patient payment page (/pay/<key>) ---- */
+.pay-card { max-width: 460px; }
+.pay-items { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pay-items li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.pay-items li span:last-child { white-space: nowrap; }
+.pay-total { border-top: 1px solid var(--border); padding-top: 8px; font-weight: 600; }
+.pay-balance { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; font-size: 16px; }
+.pay-balance strong { font-size: 22px; }
+.pay-btn { width: 100%; justify-content: center; padding: 12px; font-size: 16px; }
+.pay-methods { margin-top: 10px; text-align: center; color: var(--muted); font-size: 13px; }
+.pay-status { margin: 0 0 16px; color: var(--muted); }
+.pay-status-ok { color: var(--brand-teal); font-weight: 600; }
+.patient-call-start { display: flex; flex-direction: column; gap: 10px; }
+.invoice-paylink { margin-bottom: 16px; }

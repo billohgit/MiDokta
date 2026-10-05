@@ -1,9 +1,11 @@
 import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { runScheduledSms } from "@/lib/sms/scheduled";
+import { syncPendingCheckouts } from "@/lib/payments";
 
 /**
- * Scheduled SMS (appointment reminders, follow-ups, doctors' daily schedule).
+ * Scheduled SMS (appointment reminders, follow-ups, doctors' daily schedule). Also settles online
+ * payments whose webhook never arrived.
  * Call every 15–60 minutes from a scheduler with:  Authorization: Bearer <CRON_SECRET>
  */
 async function handle(req: NextRequest) {
@@ -16,7 +18,9 @@ async function handle(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json({ ok: true, ...(await runScheduledSms()) });
+  const sms = await runScheduledSms();
+  const payments = await syncPendingCheckouts();
+  return NextResponse.json({ ok: true, ...sms, payments });
 }
 
 export const GET = handle;

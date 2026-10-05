@@ -44,8 +44,8 @@ const templates = {
   appointmentRequested: (p: Person, a: Appt) =>
     `${SMS_BRAND}: Hi ${p.firstName}, we received your appointment request for ${when(a.startsAt)}. We'll text you once it's confirmed.`,
 
-  appointmentConfirmed: (p: Person, a: Appt, doctor?: Person | null, hospital?: string | null) =>
-    `${SMS_BRAND}: Hi ${p.firstName}, your appointment with ${drName(doctor)} is confirmed for ${when(a.startsAt)}${where(a, hospital)}.`,
+  appointmentConfirmed: (p: Person, a: Appt, doctor?: Person | null, hospital?: string | null, callLink?: string | null) =>
+    `${SMS_BRAND}: Hi ${p.firstName}, your appointment with ${drName(doctor)} is confirmed for ${when(a.startsAt)}${where(a, hospital)}.${callLink ? ` At that time, open this link to start the call: ${callLink}` : ""}`,
 
   appointmentRejected: (p: Person, a: Appt) =>
     `${SMS_BRAND}: Hi ${p.firstName}, we couldn't confirm your appointment request for ${when(a.startsAt)}. Please contact us to choose another time.`,
@@ -53,8 +53,8 @@ const templates = {
   appointmentCancelled: (p: Person, a: Appt) =>
     `${SMS_BRAND}: Hi ${p.firstName}, your appointment on ${when(a.startsAt)} has been cancelled. Please contact us to rebook.`,
 
-  patientReminder: (p: Person, a: Appt, doctor?: Person | null, hospital?: string | null) =>
-    `${SMS_BRAND}: Reminder, ${p.firstName}: you have an appointment with ${drName(doctor)} on ${when(a.startsAt)}${where(a, hospital)}.`,
+  patientReminder: (p: Person, a: Appt, doctor?: Person | null, hospital?: string | null, callLink?: string | null) =>
+    `${SMS_BRAND}: Reminder, ${p.firstName}: you have an appointment with ${drName(doctor)} on ${when(a.startsAt)}${where(a, hospital)}.${callLink ? ` Start the call here: ${callLink}` : ""}`,
 
   videoCallLink: (p: Person, doctor: Person | null | undefined, link: string) =>
     `${SMS_BRAND}: Hi ${p.firstName}, ${drName(doctor)} is ready for your video call. Join on your phone here: ${link}`,
@@ -62,8 +62,11 @@ const templates = {
   followUpReminder: (p: Person, date: Date, doctor?: Person | null) =>
     `${SMS_BRAND}: Hi ${p.firstName}, your follow-up with ${drName(doctor)} is due on ${smsDate(date)}. Please contact us to book a visit.`,
 
-  invoiceCreated: (p: Person, number: number, total: string, dueDate?: Date | null) =>
-    `${SMS_BRAND}: Hi ${p.firstName}, invoice ${formatInvoiceNumber(number)} for ${formatMoney(total)} has been issued${dueDate ? `, due ${smsDate(dueDate)}` : ""}.`,
+  invoiceCreated: (p: Person, number: number, total: string, dueDate?: Date | null, payLink?: string | null) =>
+    `${SMS_BRAND}: Hi ${p.firstName}, invoice ${formatInvoiceNumber(number)} for ${formatMoney(total)} has been issued${dueDate ? `, due ${smsDate(dueDate)}` : ""}.${payLink ? ` Pay with Orange Money, Afrimoney or card: ${payLink}` : ""}`,
+
+  paymentLink: (p: Person, number: number, balance: string, payLink: string) =>
+    `${SMS_BRAND}: Hi ${p.firstName}, ${formatMoney(balance)} is due on invoice ${formatInvoiceNumber(number)}. Pay with Orange Money, Afrimoney or card: ${payLink}`,
 
   paymentReceived: (p: Person, number: number, amount: string, balance: number) =>
     `${SMS_BRAND}: Thank you ${p.firstName}. We received ${formatMoney(amount)} for invoice ${formatInvoiceNumber(number)}. ${balance > 0 ? `Balance: ${formatMoney(balance)}.` : "Paid in full."}`,
@@ -74,6 +77,9 @@ const templates = {
 
   doctorCancelled: (patient: Person, a: Appt) =>
     `${SMS_BRAND}: Cancelled: ${patient.firstName} ${patient.lastName ?? ""}'s appointment on ${when(a.startsAt)}.`,
+
+  doctorPatientStartedCall: (patient: Person, link: string) =>
+    `${SMS_BRAND}: ${patient.firstName} ${patient.lastName ?? ""} has started your video visit and is waiting. Join: ${link}`,
 
   doctorDailySchedule: (doctor: Person, count: number, first: Date) =>
     `${SMS_BRAND}: Good morning Dr. ${doctor.lastName ?? doctor.firstName}. You have ${count} appointment${count === 1 ? "" : "s"} today, starting at ${smsTime(first)}.`,

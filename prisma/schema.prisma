@@ -59,6 +59,15 @@ enum PaymentMethod {
   MOBILE_MONEY
   BANK_TRANSFER
   INSURANCE
+  /// Paid by the patient through the online checkout (mobile money or card).
+  ONLINE
+}
+
+enum CheckoutStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  EXPIRED
 }
 
 enum StockMovementType {
@@ -93,6 +102,7 @@ enum NotificationType {
   APPOINTMENT_COMPLETED
   APPOINTMENT_REMINDER
   PAYMENT_RECEIVED
+  VIDEO_CALL
   STOCK_LOW
   GENERAL
 }
@@ -304,23 +314,26 @@ model StockMovement {
 }
 
 model Invoice {
-  id            String        @id @default(cuid())
-  number        Int           @unique @default(autoincrement())
+  id            String            @id @default(cuid())
+  number        Int               @unique @default(autoincrement())
   patientId     String
-  patient       User          @relation("PatientInvoices", fields: [patientId], references: [id])
+  patient       User              @relation("PatientInvoices", fields: [patientId], references: [id])
   appointmentId String?
-  appointment   Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  appointment   Appointment?      @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   hospitalId    String?
-  hospital      Hospital?     @relation(fields: [hospitalId], references: [id])
-  status        InvoiceStatus @default(UNPAID)
-  total         Decimal       @db.Decimal(12, 2)
-  amountPaid    Decimal       @default(0) @db.Decimal(12, 2)
-  dueDate       DateTime?     @db.Date
+  hospital      Hospital?         @relation(fields: [hospitalId], references: [id])
+  status        InvoiceStatus     @default(UNPAID)
+  total         Decimal           @db.Decimal(12, 2)
+  amountPaid    Decimal           @default(0) @db.Decimal(12, 2)
+  dueDate       DateTime?         @db.Date
   notes         String?
+  /// The secret in the patient's payment link (/pay/<key>).
+  payKey        String?           @unique
   items         InvoiceItem[]
   payments      Payment[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  checkouts     CheckoutSession[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   @@index([status])
   @@index([patientId])
@@ -336,15 +349,36 @@ model InvoiceItem {
 }
 
 model Payment {
-  id           String        @id @default(cuid())
+  id           String           @id @default(cuid())
   invoiceId    String
-  invoice      Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  amount       Decimal       @db.Decimal(12, 2)
+  invoice      Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount       Decimal          @db.Decimal(12, 2)
   method       PaymentMethod
   reference    String?
-  paidAt       DateTime      @default(now())
+  paidAt       DateTime         @default(now())
   receivedById String?
-  receivedBy   User?         @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+  receivedBy   User?            @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+  checkout     CheckoutSession?
+}
+
+/// An online payment attempt through Monime's hosted checkout (src/lib/payments.ts).
+model CheckoutSession {
+  id          String         @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  /// Monime's checkout session id.
+  sessionId   String         @unique
+  redirectUrl String
+  amount      Decimal        @db.Decimal(12, 2)
+  status      CheckoutStatus @default(PENDING)
+  /// The payment recorded when the checkout completed.
+  paymentId   String?        @unique
+  payment     Payment?       @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([invoiceId])
+  @@index([status, createdAt])
 }
 
 model Notification {

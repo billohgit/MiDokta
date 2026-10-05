@@ -4,6 +4,7 @@ import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { queueSms } from "./index";
 import { APP_TIME_ZONE, sms } from "./templates";
+import { videoCallLinkFor } from "@/lib/video";
 
 /** Local hour (in APP_TIME_ZONE) from which doctors' daily schedule texts go out. */
 const DAILY_SCHEDULE_HOUR = Number(process.env.SMS_DAILY_SCHEDULE_HOUR ?? 7);
@@ -61,12 +62,14 @@ export async function runScheduledSms(now = new Date()) {
   add(
     "appointmentReminders",
     await queueSms(
-      upcoming.map((a) => ({
-        userId: a.patientId,
-        category: "APPOINTMENT_REMINDER",
-        body: sms.patientReminder(a.patient, a, a.doctor, a.hospital?.name),
-        dedupeKey: `appointment-reminder:${a.id}`,
-      }))
+      await Promise.all(
+        upcoming.map(async (a) => ({
+          userId: a.patientId,
+          category: "APPOINTMENT_REMINDER" as const,
+          body: sms.patientReminder(a.patient, a, a.doctor, a.hospital?.name, await videoCallLinkFor(a)),
+          dedupeKey: `appointment-reminder:${a.id}`,
+        }))
+      )
     )
   );
 

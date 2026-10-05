@@ -19,6 +19,7 @@ export const NOTIFICATION_ICON: Record<NotificationType, string> = {
   APPOINTMENT_COMPLETED: "fa-circle-check",
   APPOINTMENT_REMINDER: "fa-clock",
   PAYMENT_RECEIVED: "fa-money-bill-wave",
+  VIDEO_CALL: "fa-video",
   STOCK_LOW: "fa-triangle-exclamation",
   GENERAL: "fa-bell",
 };

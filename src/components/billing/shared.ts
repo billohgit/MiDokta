@@ -20,7 +20,11 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   MOBILE_MONEY: "Mobile Money",
   BANK_TRANSFER: "Bank Transfer",
   INSURANCE: "Insurance",
+  ONLINE: "Online (mobile money / card)",
 };
+
+/** Methods the front desk can record by hand; online payments are recorded by the checkout. */
+export const MANUAL_PAYMENT_METHODS = (Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).filter((m) => m !== "ONLINE");
 
 /** Suggested line items for the invoice form. */
 export const COMMON_SERVICES = [

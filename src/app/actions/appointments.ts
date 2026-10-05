@@ -8,6 +8,7 @@ import { PORTAL_TOKEN, notifyRoles, notifyUsers } from "@/lib/notifications";
 import { FRONT_DESK_ROLES } from "@/lib/roles";
 import { queueSms } from "@/lib/sms";
 import { sms } from "@/lib/sms/templates";
+import { videoCallLinkFor } from "@/lib/video";
 import { formatDate, formatTime } from "@/components/appointments/shared";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -91,7 +92,8 @@ async function sendStatusSms(
   const patient = { userId: appt.patientId };
 
   if (status === "CONFIRMED") {
-    messages.push({ ...patient, category: "APPOINTMENT_CONFIRMED", body: sms.appointmentConfirmed(appt.patient, appt, doctor, appt.hospital?.name) });
+    const callLink = await videoCallLinkFor(appt);
+    messages.push({ ...patient, category: "APPOINTMENT_CONFIRMED", body: sms.appointmentConfirmed(appt.patient, appt, doctor, appt.hospital?.name, callLink) });
     if (byFrontDesk && doctorId) {
       messages.push({ userId: doctorId, category: "APPOINTMENT_ASSIGNED", body: sms.doctorAssigned(appt.patient, appt) });
     }
@@ -150,7 +152,7 @@ export async function scheduleAppointment(formData: FormData): Promise<ActionRes
     : null;
   await queueSms([
     doctor
-      ? { userId: patientId, category: "APPOINTMENT_CONFIRMED", body: sms.appointmentConfirmed(patient, appt, doctor, hospital?.name) }
+      ? { userId: patientId, category: "APPOINTMENT_CONFIRMED", body: sms.appointmentConfirmed(patient, appt, doctor, hospital?.name, await videoCallLinkFor(appt)) }
       : { userId: patientId, category: "APPOINTMENT_REQUESTED", body: sms.appointmentRequested(patient, appt) },
     ...(doctor && user.role !== Role.DOCTOR
       ? [{ userId: doctor.id, category: "APPOINTMENT_ASSIGNED" as const, body: sms.doctorAssigned(patient, appt) }]

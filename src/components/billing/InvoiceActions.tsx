@@ -5,7 +5,7 @@ import { recordPayment, voidInvoice } from "@/app/actions/billing";
 import Modal from "@/components/ui/Modal";
 import useServerAction from "@/components/ui/useServerAction";
 import { formatMoney } from "@/lib/money";
-import { PAYMENT_METHOD_LABEL } from "./shared";
+import { MANUAL_PAYMENT_METHODS, PAYMENT_METHOD_LABEL } from "./shared";
 
 type Props = { invoiceId: string; number: string; balance: number; canPay: boolean; canVoid: boolean };
 
@@ -55,9 +55,9 @@ function PaymentModal({ invoiceId, number, balance, onClose }: { invoiceId: stri
         <label className="field">
           <span>Method *</span>
           <select name="method" defaultValue="CASH" required>
-            {Object.entries(PAYMENT_METHOD_LABEL).map(([value, label]) => (
+            {MANUAL_PAYMENT_METHODS.map((value) => (
               <option key={value} value={value}>
-                {label}
+                {PAYMENT_METHOD_LABEL[value]}
               </option>
             ))}
           </select>

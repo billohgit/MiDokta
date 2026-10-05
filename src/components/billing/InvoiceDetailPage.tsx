@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { displayEmail } from "@/lib/people";
 import { formatInvoiceNumber, formatMoney } from "@/lib/money";
+import { invoicePayLink, syncInvoiceCheckouts } from "@/lib/payments";
+import PayLinkBar from "@/components/payments/PayLinkBar";
 import Logo from "@/components/Logo";
 import InvoiceActions from "./InvoiceActions";
 import { INVOICE_STATUS_CLASS, INVOICE_STATUS_LABEL, PAYMENT_METHOD_LABEL } from "./shared";
@@ -17,6 +19,8 @@ type Props = {
 
 /** One printable invoice, shared by the admin and receptionist portals. */
 export default async function InvoiceDetailPage({ id, basePath, canVoid = false }: Props) {
+  // Pick up online payments that completed but haven't been recorded yet.
+  await syncInvoiceCheckouts(id);
   const invoice = await prisma.invoice.findUnique({
     where: { id },
     include: {
@@ -31,6 +35,8 @@ export default async function InvoiceDetailPage({ id, basePath, canVoid = false 
 
   const balance = Number(invoice.total) - Number(invoice.amountPaid);
   const number = formatInvoiceNumber(invoice.number);
+  const payable = invoice.status === "UNPAID" || invoice.status === "PARTIAL";
+  const payLink = payable ? await invoicePayLink(invoice.id) : null;
 
   return (
     <div className="settings">
@@ -42,10 +48,16 @@ export default async function InvoiceDetailPage({ id, basePath, canVoid = false 
           invoiceId={invoice.id}
           number={number}
           balance={balance}
-          canPay={invoice.status === "UNPAID" || invoice.status === "PARTIAL"}
+          canPay={payable}
           canVoid={canVoid && invoice.status !== "VOID" && invoice.payments.length === 0}
         />
       </div>
+
+      {payLink && (
+        <div className="invoice-paylink">
+          <PayLinkBar invoiceId={invoice.id} link={payLink} />
+        </div>
+      )}
 
       <article className="card invoice-doc print-area">
         <header className="invoice-doc-head">

@@ -6,7 +6,9 @@ import { authorize } from "@/lib/auth";
 import { type ActionResult, DENIED, fail } from "@/lib/form";
 import { queueSms } from "@/lib/sms";
 import { sms } from "@/lib/sms/templates";
-import { ensureRoom, patientLink, videoConfigured } from "@/lib/video";
+import { notifyUsers } from "@/lib/notifications";
+import { appBaseUrl } from "@/lib/url";
+import { ensureRoom, hasLiveRoom, patientLink, patientStartWindow, videoConfigured } from "@/lib/video";
 
 /** The doctor's own confirmed video appointment, or an error message. */
 async function ownVideoAppointment(id: string, doctorId: string) {
@@ -32,9 +34,10 @@ async function textLink(appt: Exclude<Awaited<ReturnType<typeof ownVideoAppointm
   return queued > 0;
 }
 
-/** Opens the room for a checked appointment, texting the patient their link the first time. */
+/** Opens the room for a checked appointment, texting the patient their link when the room is newly opened. */
 async function openRoom(appt: Exclude<Awaited<ReturnType<typeof ownVideoAppointment>>, string>, doctorId: string) {
-  const firstStart = !appt.videoPatientKey;
+  // The link may already have gone out with the confirmation, but "your doctor is ready" is still news.
+  const firstStart = !(hasLiveRoom(appt) && appt.videoPatientKey);
   let updated;
   try {
     updated = await ensureRoom(appt);
@@ -115,5 +118,48 @@ export async function resendVideoLink(id: string): Promise<ActionResult> {
   if (!(await textLink(appt, appt.videoPatientKey, me.id))) {
     return fail("The text couldn't be sent: the patient has no valid phone number or has turned off texts. Copy the link instead.");
   }
+  return { ok: true };
+}
+
+/**
+ * Public: the patient starts their video visit from their link (/call/<key>), where the key is the
+ * only credential. Opens the room if it isn't already, and alerts the doctor in the app and by text.
+ */
+export async function patientStartCall(key: string): Promise<ActionResult> {
+  if (!videoConfigured()) return fail("Video calls aren't available right now. Please contact the clinic.");
+  const appt = await prisma.appointment.findUnique({
+    where: { videoPatientKey: key },
+    include: { patient: true, doctor: true },
+  });
+  if (!appt || appt.visitType !== "VIDEO_CALL") return fail("This video call link isn't valid.");
+  if (appt.status !== "CONFIRMED" || !appt.doctorId) return fail("This video visit is no longer active.");
+
+  const timing = patientStartWindow(appt.startsAt);
+  if (timing === "early") return fail("It's too early to start this call. Come back at your appointment time.");
+  if (timing === "late") return fail("This appointment time has passed. Please contact the clinic to rebook.");
+
+  // Already open (the doctor or an earlier tap started it): just let the patient in.
+  if (hasLiveRoom(appt)) return { ok: true };
+
+  try {
+    await ensureRoom(appt);
+  } catch (e) {
+    console.error("Creating video room failed", e);
+    return fail("The call couldn't be started. Please try again in a moment.");
+  }
+
+  const doctorCall = `/doctor/appointments/${appt.id}/call`;
+  const patientName = `${appt.patient.firstName} ${appt.patient.lastName}`;
+  await notifyUsers([appt.doctorId], {
+    type: "VIDEO_CALL",
+    title: "Patient is waiting on video",
+    body: `${patientName} started your video visit.`,
+    link: doctorCall,
+  });
+  await queueSms({
+    userId: appt.doctorId,
+    category: "VIDEO_CALL",
+    body: sms.doctorPatientStartedCall(appt.patient, `${await appBaseUrl()}${doctorCall}`),
+  });
   return { ok: true };
 }

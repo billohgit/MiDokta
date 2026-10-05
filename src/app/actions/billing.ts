@@ -9,6 +9,7 @@ import { FRONT_DESK_ROLES } from "@/lib/roles";
 import { queueSms } from "@/lib/sms";
 import { sms } from "@/lib/sms/templates";
 import { formatInvoiceNumber, formatMoney } from "@/lib/money";
+import { invoicePayLink } from "@/lib/payments";
 import { type ActionResult, DENIED, dateValue, decimalValue, enumValue, fail, text } from "@/lib/form";
 
 const refresh = () => revalidatePath("/", "layout");
@@ -74,7 +75,7 @@ export async function createInvoice(formData: FormData): Promise<ActionResult> {
     await queueSms({
       userId: patientId,
       category: "INVOICE_CREATED",
-      body: sms.invoiceCreated(patient, invoice.number, total.toString(), dueDate),
+      body: sms.invoiceCreated(patient, invoice.number, total.toString(), dueDate, await invoicePayLink(invoice.id)),
     });
   }
 
@@ -88,7 +89,8 @@ export async function recordPayment(formData: FormData): Promise<ActionResult> {
 
   const invoiceId = text(formData, "invoiceId");
   const amount = decimalValue(formData, "amount", 0.01, MAX_AMOUNT);
-  const method = enumValue(formData, "method", Object.values(PaymentMethod));
+  // Online payments are only ever recorded by the checkout, once Monime confirms them.
+  const method = enumValue(formData, "method", Object.values(PaymentMethod).filter((m) => m !== "ONLINE"));
   if (!invoiceId) return fail("Invoice not found.");
   if (!amount || !MONEY_PATTERN.test(amount)) return fail("Enter a valid amount (up to 2 decimal places).");
   if (!method) return fail("Choose a payment method.");

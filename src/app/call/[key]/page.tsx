@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { joinUrl, videoConfigured } from "@/lib/video";
+import { joinUrl, patientStartWindow, videoConfigured } from "@/lib/video";
+import { smsDate, smsTime } from "@/lib/sms/templates";
+import PatientStartCallButton from "@/components/video/PatientStartCallButton";
 import Logo from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +14,7 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
 };
 
-function Notice({ title, text }: { title: string; text: string }) {
+function Notice({ title, text, children }: { title: string; text: string; children?: React.ReactNode }) {
   return (
     <main className="login-page">
       <div className="card login-card call-notice">
@@ -21,6 +23,7 @@ function Notice({ title, text }: { title: string; text: string }) {
         </div>
         <h1>{title}</h1>
         <p className="login-sub">{text}</p>
+        {children}
       </div>
     </main>
   );
@@ -41,12 +44,29 @@ export default async function PatientCallPage({ params }: { params: Promise<{ ke
     return <Notice title="This call has ended" text="This video visit is no longer active. Contact the clinic if you need another appointment." />;
   }
 
-  const url = videoConfigured() ? await joinUrl(appt, { name: appt.patient.firstName, isOwner: false }) : null;
+  if (!videoConfigured()) {
+    return <Notice title="Video calls are unavailable" text="Video calls aren't available right now. Please contact the clinic." />;
+  }
+
+  const url = await joinUrl(appt, { name: appt.patient.firstName, isOwner: false });
   if (!url) {
+    const doctor = appt.doctor ? `Dr. ${appt.doctor.lastName}` : "your doctor";
+    const when = `${smsDate(appt.startsAt)} at ${smsTime(appt.startsAt)}`;
+    const timing = appt.doctorId ? patientStartWindow(appt.startsAt) : "early";
+    if (timing === "open") {
+      return (
+        <Notice title="Your video visit" text={`Your visit with ${doctor} is at ${when}. Tap below to start the call; ${doctor} will be told you're waiting.`}>
+          <PatientStartCallButton callKey={key} />
+        </Notice>
+      );
+    }
+    if (timing === "late") {
+      return <Notice title="This call has ended" text="This appointment time has passed. Please contact the clinic if you need another appointment." />;
+    }
     return (
       <Notice
-        title="The call isn't open"
-        text="Your doctor hasn't opened the call yet, or it has closed. Keep this page and try again when your doctor texts you."
+        title="It's not time yet"
+        text={`Your video visit with ${doctor} is on ${when}. Open this link again from 15 minutes before then to start the call.`}
       />
     );
   }
