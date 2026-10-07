@@ -43,20 +43,36 @@ export async function destroySession() {
   (await cookies()).delete(COOKIE);
 }
 
-/** The signed-in, active user — or null. Cached per request. */
-export const getSessionUser = cache(async (): Promise<User | null> => {
+/** The verified session token's claims, or null. Cached per request. */
+const sessionClaims = cache(async () => {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
-
   try {
     const { payload } = await jwtVerify(token, secret(), { algorithms: ["HS256"] });
-    if (!payload.sub) return null;
-    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-    return user?.isActive ? user : null;
+    return payload.sub ? { sub: payload.sub, iat: payload.iat } : null;
   } catch {
     return null;
   }
 });
+
+/** The signed-in, active user — or null. Cached per request. */
+export const getSessionUser = cache(async (): Promise<User | null> => {
+  const claims = await sessionClaims();
+  if (!claims) return null;
+  const user = await prisma.user.findUnique({ where: { id: claims.sub } });
+  return user?.isActive ? user : null;
+});
+
+const RECENT_SIGN_IN_MS = 15 * 60 * 1000;
+
+/**
+ * True when this session was signed in within the last few minutes. Signing in proves who the user
+ * is, so sensitive changes (like setting a password) can then skip asking for the current one.
+ */
+export async function signedInRecently() {
+  const iat = (await sessionClaims())?.iat;
+  return iat !== undefined && Date.now() - iat * 1000 < RECENT_SIGN_IN_MS;
+}
 
 /** For pages and layouts: redirects to /login when signed out or the role doesn't match. */
 export async function requireUser(...roles: Role[]): Promise<User> {

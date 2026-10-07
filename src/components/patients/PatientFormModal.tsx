@@ -55,19 +55,20 @@ export default function PatientFormModal({ patient, onClose, onSaved }: Props) {
             max={new Date().toISOString().slice(0, 10)}
           />
         </label>
+        {/* New patients sign in with either; some older records have neither. */}
         <label className="field">
-          <span>Phone</span>
-          <input type="tel" name="phone" defaultValue={patient?.phone ?? ""} placeholder="+232 76 123 456" />
+          <span>Phone{patient ? "" : " *"}</span>
+          <input
+            type="tel"
+            name="phone"
+            defaultValue={patient?.phone ?? ""}
+            placeholder="+232 76 123 456"
+            required={!patient}
+          />
         </label>
         <label className="field">
-          <span>Email</span>
-          <input
-            type="email"
-            name="email"
-            defaultValue={patient?.email ?? ""}
-            placeholder="Optional"
-            autoComplete="off"
-          />
+          <span>Email{patient ? "" : " *"}</span>
+          <input type="email" name="email" defaultValue={patient?.email ?? ""} autoComplete="off" required={!patient} />
         </label>
         <label className="field">
           <span>Address</span>

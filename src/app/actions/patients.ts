@@ -37,6 +37,8 @@ export async function savePatient(formData: FormData): Promise<ActionResult> {
   const phone = phoneValue(formData, "phone");
 
   if (!firstName || !lastName) return fail("First and last name are required.");
+  // New patients sign in with either, so both are needed. Older records may lack them.
+  if (!id && (!email || !text(formData, "phone"))) return fail("Phone number and email are required.");
   if (email && !isEmail(email)) return fail("Enter a valid email address.");
   if (gender === undefined) return fail("Invalid gender.");
   if (phone === undefined) return fail(PHONE_HINT);
@@ -74,7 +76,7 @@ export async function savePatient(formData: FormData): Promise<ActionResult> {
         ...data,
         email: email ?? placeholderEmail(),
         role: Role.PATIENT,
-        // Patients don't sign in yet; give them an unusable random password.
+        // Patients first sign in with a texted code, then set a password in Settings.
         password: await hashPassword(randomBytes(32).toString("hex")),
       },
     });

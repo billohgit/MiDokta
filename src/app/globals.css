@@ -562,6 +562,9 @@ button { font: inherit; border: none; background: none; cursor: pointer; color: 
 }
 .detail-input:focus { outline: none; border-color: #d32f2f; }
 
+.password-card { margin-top: 30px; padding-bottom: 28px; }
+.password-card > .form-note { margin: 4px 0 8px; }
+.password-card .settings-message { margin: 16px 0 0; }
 .settings-actions { display: flex; justify-content: flex-end; padding: 50px 20px 30px; }
 .btn-save { height: 44px; font-size: 17px; padding: 0 17px; }
 

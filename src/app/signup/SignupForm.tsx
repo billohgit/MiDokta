@@ -39,7 +39,10 @@ export default function SignupForm({ defaultCountry }: { defaultCountry: string 
         <h1>Account created</h1>
         <p className="login-sub">
           Thanks, {v.firstName}. We&apos;re checking your photo and ID, and an administrator needs to approve your
-          account before you can sign in. You&apos;ll be able to sign in with {v.email} once it&apos;s activated.
+          account before you can sign in.{" "}
+          {v.role === "PATIENT"
+            ? `Once it's activated, sign in with ${v.email} and your password, or with a code texted to your phone.`
+            : `You'll be able to sign in with ${v.email} once it's activated.`}
         </p>
         <Link href="/login" className="btn btn-primary login-btn">
           Back to Sign In
@@ -79,6 +82,7 @@ export default function SignupForm({ defaultCountry }: { defaultCountry: string 
             defaultValue={v.phone}
             required
           />
+          <small className="form-note">You can sign in with your email or this phone number.</small>
         </div>
         <label className="field">
           <span>I am a</span>

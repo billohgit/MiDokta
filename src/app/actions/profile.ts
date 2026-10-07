@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { Gender, Prisma, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { authorize } from "@/lib/auth";
+import { authorize, signedInRecently } from "@/lib/auth";
+import { MIN_PASSWORD_LENGTH, hashPassword, verifyPassword } from "@/lib/password";
+import { displayEmail } from "@/lib/people";
 import { PHONE_HINT, checkbox, phoneValue } from "@/lib/form";
 import { AVATAR_TYPES, deleteAvatar, saveAvatar } from "@/lib/uploads";
 
@@ -67,6 +69,28 @@ export async function updateProfile(formData: FormData): Promise<ActionResult> {
   }
 
   revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/**
+ * Sets the password a patient signs in with alongside their email. Patients the clinic registered
+ * have never had one, so right after signing in (by texted code) the current password isn't asked.
+ */
+export async function setPassword(formData: FormData): Promise<ActionResult> {
+  const user = await authorize(Role.PATIENT);
+  if (!user) return { ok: false, error: "Please sign in again." };
+
+  const current = String(formData.get("currentPassword") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirmPassword") ?? "");
+  if (!displayEmail(user.email)) return { ok: false, error: "Add your email address first. You sign in with it and this password." };
+  if (password.length < MIN_PASSWORD_LENGTH) return { ok: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
+  if (password !== confirm) return { ok: false, error: "Passwords do not match." };
+  if (!(await signedInRecently()) && !(await verifyPassword(current, user.password))) {
+    return { ok: false, error: "Your current password isn't right. Never set one? Sign out, sign back in with your phone, and try again." };
+  }
+
+  await prisma.user.update({ where: { id: user.id }, data: { password: await hashPassword(password) } });
   return { ok: true };
 }
 

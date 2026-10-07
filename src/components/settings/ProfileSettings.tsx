@@ -75,7 +75,8 @@ function Field({ label, name, editing, display, children, type = "text", default
   );
 }
 
-export default function ProfileSettings({ profile }: { profile: Profile }) {
+/** `children` are extra settings cards shown below the profile, such as the patient password card. */
+export default function ProfileSettings({ profile, children }: { profile: Profile; children?: React.ReactNode }) {
   const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [saving, startSaving] = useTransition();
@@ -243,6 +244,7 @@ export default function ProfileSettings({ profile }: { profile: Profile }) {
           </button>
         </div>
       </form>
+      {children}
     </div>
   );
 }

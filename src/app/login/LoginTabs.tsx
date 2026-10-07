@@ -8,7 +8,7 @@ type Who = "patient" | "staff";
 
 const REMEMBER_KEY = "mi-dokta-login-as";
 
-/** Patients sign in with a texted code; doctors and staff with their password. */
+/** Patients sign in with a texted code or email and password; doctors and staff with their password. */
 export default function LoginTabs({ defaultCountry, initial }: { defaultCountry: string; initial: Who }) {
   const [who, setWho] = useState<Who>(initial);
 
