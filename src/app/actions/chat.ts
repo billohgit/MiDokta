@@ -34,6 +34,8 @@ export async function sendMessage(
 ): Promise<Result<{ message: ChatMessage; smsQueued: number; smsSkipped: number }>> {
   const me = await authorize(...CHAT_ROLES);
   if (!me) return DENIED;
+  // Patients write in the app; their messages aren't also texted to staff at the clinic's cost.
+  if (me.role === Role.PATIENT) alsoSms = false;
 
   const text = String(body ?? "").trim();
   if (!text) return fail("Message can't be empty.");
@@ -117,8 +119,11 @@ export async function startDirectConversation(userId: string): Promise<Result<{ 
   }
 }
 
+/** Groups are for staff; patients only have one-to-one chats with their doctors. */
+const GROUP_ROLES = CHAT_ROLES.filter((r) => r !== Role.PATIENT);
+
 export async function createGroupConversation(title: string, memberIds: string[]): Promise<Result<{ id: string }>> {
-  const me = await authorize(...CHAT_ROLES);
+  const me = await authorize(...GROUP_ROLES);
   if (!me) return DENIED;
 
   const name = String(title ?? "").trim();
@@ -140,7 +145,7 @@ export async function createGroupConversation(title: string, memberIds: string[]
 }
 
 export async function addGroupMembers(conversationId: string, memberIds: string[]): Promise<Result> {
-  const me = await authorize(...CHAT_ROLES);
+  const me = await authorize(...GROUP_ROLES);
   if (!me) return DENIED;
 
   const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });

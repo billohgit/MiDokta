@@ -79,9 +79,9 @@ const toMinor = (amount: Prisma.Decimal) => amount.times(100).toDecimalPlaces(0)
 
 /**
  * Starts (or reuses) a checkout for the invoice's whole balance and returns the Monime page to send
- * the patient to.
+ * the patient to. Monime sends them back to `returnUrl` with `?paid=1` or `?cancelled=1`.
  */
-export async function startCheckout(invoice: Invoice & { payKey: string }): Promise<string> {
+export async function startCheckout(invoice: Invoice, returnUrl: string): Promise<string> {
   const balance = invoice.total.minus(invoice.amountPaid);
 
   const recent = await prisma.checkoutSession.findFirst({
@@ -90,7 +90,6 @@ export async function startCheckout(invoice: Invoice & { payKey: string }): Prom
   });
   if (recent) return recent.redirectUrl;
 
-  const base = await payLink(invoice.payKey);
   const number = formatInvoiceNumber(invoice.number);
   const session = await monime<MonimeSession>("/checkout-sessions", {
     method: "POST",
@@ -99,8 +98,8 @@ export async function startCheckout(invoice: Invoice & { payKey: string }): Prom
       name: `Invoice ${number}`,
       reference: invoice.id,
       description: `Payment for invoice ${number}`,
-      successUrl: `${base}?paid=1`,
-      cancelUrl: `${base}?cancelled=1`,
+      successUrl: `${returnUrl}?paid=1`,
+      cancelUrl: `${returnUrl}?cancelled=1`,
       lineItems: [{ name: `Invoice ${number}`, price: { currency: CURRENCY, value: toMinor(balance) }, quantity: 1 }],
       metadata: { invoiceId: invoice.id },
     },

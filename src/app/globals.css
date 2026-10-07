@@ -1286,13 +1286,64 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
   font: inherit; font-size: 13px; font-weight: 400; color: var(--muted); background: #f8f9fa;
 }
 .call-note { color: var(--muted); font-weight: 400; }
-.call-frame { width: 100%; height: calc(100vh - 290px); min-height: 420px; border: 0; padding: 0; overflow: hidden; }
-.call-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.patient-call { display: flex; flex-direction: column; height: 100vh; height: 100dvh; background: #111; }
-.patient-call-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; background: #fff; }
-.patient-call-head span { font-weight: 600; color: var(--muted); }
-.patient-call iframe { flex: 1; width: 100%; border: 0; }
 .call-notice h1 { font-size: 24px; }
+
+/* Incoming call: full screen over whatever page the person is on. */
+.incoming-call {
+  position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(22, 38, 51, 0.92);
+}
+.incoming-card { display: flex; flex-direction: column; align-items: center; gap: 14px; color: #fff; text-align: center; }
+.incoming-card h2 { font-size: 26px; font-weight: 700; }
+.incoming-label { font-size: 15px; opacity: 0.85; display: flex; align-items: center; gap: 8px; }
+.incoming-avatar, .call-stage-avatar.ringing { border-radius: 50%; animation: call-pulse 1.6s ease-out infinite; }
+@keyframes call-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(124, 198, 41, 0.6); }
+  100% { box-shadow: 0 0 0 28px rgba(124, 198, 41, 0); }
+}
+.incoming-actions { display: flex; gap: 48px; margin-top: 18px; }
+.call-round {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: inherit;
+}
+.call-round i {
+  width: 68px; height: 68px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 26px; color: #fff;
+}
+.call-round:disabled { opacity: 0.6; }
+.call-answer i { background: #2fb344; }
+.call-decline i { background: #d63939; }
+
+/* The call screen: ringing and ended states, then the live video. */
+.call-stage { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 48px 16px; text-align: center; }
+.call-stage h2 { font-size: 26px; font-weight: 700; margin-top: 10px; }
+.call-stage-status { color: var(--muted); font-size: 17px; }
+.call-stage-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 16px; }
+.call-live { display: flex; flex-direction: column; gap: 12px; }
+.call-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.call-bar-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.call-bar-text small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.call-hangup { background: #d63939; gap: 6px; }
+.call-frame { width: 100%; min-height: 420px; border: 0; padding: 0; overflow: hidden; border-radius: var(--radius); background: #111; height: calc(100vh - 190px); height: calc(100dvh - 190px); }
+.call-connecting { display: flex; align-items: center; justify-content: center; gap: 10px; color: #fff; }
+
+/* Call history and contacts */
+.calls-card { padding: 20px 22px; }
+.calls-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+.call-contacts, .call-log { list-style: none; display: flex; flex-direction: column; }
+.call-contacts li, .call-log li {
+  display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.call-contacts li:last-child, .call-log li:last-child { border-bottom: none; }
+.call-contact-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.call-contact-name small { color: var(--muted); font-size: 13px; }
+.call-dir { width: 20px; text-align: center; color: var(--brand-teal); }
+.call-log li.missed .call-dir, .call-log li.missed strong { color: #d63939; }
+@media (max-width: 600px) {
+  .call-bar .btn span { display: none; }
+  .call-frame { height: calc(100dvh - 150px); min-height: 360px; }
+  .incoming-actions { gap: 36px; }
+}
+
 .chat-call-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; }
 .chat-call-error { max-width: 220px; text-align: right; }
 @media (max-width: 600px) { .chat-call-btn span { display: none; } }
@@ -1309,5 +1360,38 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
 .pay-methods { margin-top: 10px; text-align: center; color: var(--muted); font-size: 13px; }
 .pay-status { margin: 0 0 16px; color: var(--muted); }
 .pay-status-ok { color: var(--brand-teal); font-weight: 600; }
-.patient-call-start { display: flex; flex-direction: column; gap: 10px; }
 .invoice-paylink { margin-bottom: 16px; }
+
+/* ---------- Patient sign-in ---------- */
+.login-who { display: flex; margin-bottom: 20px; }
+.login-who button { flex: 1; }
+.login-step-text { color: var(--muted); font-size: 15px; }
+.login-step-text strong { color: var(--text); white-space: nowrap; }
+.login-links { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.login-choices { display: flex; flex-direction: column; gap: 10px; }
+.login-choices .btn { justify-content: flex-start; }
+.code-input { font-size: 24px !important; letter-spacing: 8px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* ---------- Patient portal ---------- */
+.patient-home { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+.my-appts { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.my-appt { display: flex; align-items: center; gap: 16px; padding: 16px 18px; flex-wrap: wrap; }
+.my-appt-date {
+  width: 58px; flex: none; display: flex; flex-direction: column; align-items: center; padding: 6px 0;
+  border-radius: 10px; background: #fdecea; color: var(--primary);
+}
+.my-appt-date strong { font-size: 22px; line-height: 1.1; }
+.my-appt-date span { font-size: 12px; text-transform: uppercase; font-weight: 600; }
+.my-appt-text { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 2px; }
+.my-appt-text span { color: var(--muted); font-size: 14px; }
+.my-appt-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pay-reminder {
+  display: flex; align-items: center; gap: 14px; padding: 16px 20px; margin-bottom: 16px;
+  border-left: 4px solid #7cc629;
+}
+.pay-reminder span { flex: 1; }
+.pay-reminder > i:first-child { font-size: 24px; color: #7cc629; }
+.my-invoice { padding: 24px; max-width: 640px; }
+.my-invoice-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+.my-invoice-pay { border-top: 1px solid var(--border); padding-top: 16px; }
+@media (max-width: 992px) { .patient-home { grid-template-columns: 1fr; } }

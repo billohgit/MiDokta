@@ -1,11 +1,13 @@
 "use server";
 
+import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { authorize } from "@/lib/auth";
 import { FRONT_DESK_ROLES } from "@/lib/roles";
 import { type ActionResult, DENIED, fail } from "@/lib/form";
 import { queueSms } from "@/lib/sms";
 import { sms } from "@/lib/sms/templates";
+import { appBaseUrl } from "@/lib/url";
 import { ensurePayKey, payLink, paymentsConfigured, startCheckout, syncInvoiceCheckouts } from "@/lib/payments";
 
 const NOT_SET_UP = "Online payments aren't set up yet. Add MONIME_ACCESS_TOKEN and MONIME_SPACE_ID to the server settings.";
@@ -47,7 +49,27 @@ export async function payInvoiceOnline(key: string): Promise<ActionResult & { ur
   if (fresh.status !== "UNPAID" && fresh.status !== "PARTIAL") return fail("This invoice has nothing left to pay.");
 
   try {
-    return { ok: true, url: await startCheckout({ ...fresh, payKey: invoice.payKey }) };
+    return { ok: true, url: await startCheckout(fresh, await payLink(invoice.payKey)) };
+  } catch (e) {
+    console.error("Starting checkout failed", e);
+    return fail("We couldn't start the payment. Please try again in a moment.");
+  }
+}
+
+/** A signed-in patient pays their own invoice; Monime sends them back to the invoice in their portal. */
+export async function payMyInvoice(invoiceId: string): Promise<ActionResult & { url?: string }> {
+  const me = await authorize(Role.PATIENT);
+  if (!me) return DENIED;
+  if (!paymentsConfigured()) return fail("Online payment isn't available right now. Please pay at the clinic.");
+  const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, patientId: me.id } });
+  if (!invoice) return fail("Invoice not found.");
+
+  await syncInvoiceCheckouts(invoice.id);
+  const fresh = await prisma.invoice.findUniqueOrThrow({ where: { id: invoice.id } });
+  if (fresh.status !== "UNPAID" && fresh.status !== "PARTIAL") return fail("This invoice has nothing left to pay.");
+
+  try {
+    return { ok: true, url: await startCheckout(fresh, `${await appBaseUrl()}/patient/billing/${invoice.id}`) };
   } catch (e) {
     console.error("Starting checkout failed", e);
     return fail("We couldn't start the payment. Please try again in a moment.");

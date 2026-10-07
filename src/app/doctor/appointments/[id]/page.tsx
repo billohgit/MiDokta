@@ -7,7 +7,7 @@ import { patientRecords } from "@/lib/records";
 import PatientSummary from "@/components/patients/PatientSummary";
 import MedicalHistory from "@/components/records/MedicalHistory";
 import ConsultationForm, { type RecordFormData } from "@/components/records/ConsultationForm";
-import StartCallButton from "@/components/video/StartCallButton";
+import CallButton from "@/components/calls/CallButton";
 import AppointmentStatusButtons from "@/components/appointments/AppointmentStatusButtons";
 import { STATUS_LABEL, VISIT_LABEL, formatDate, formatTime } from "@/components/appointments/shared";
 
@@ -80,7 +80,13 @@ export default async function ConsultationPage({ params }: { params: Promise<{ i
         <div className="consult-status">
           <span className={`status-pill status-${appt.status.toLowerCase()}`}>{STATUS_LABEL[appt.status]}</span>
           {appt.visitType === "VIDEO_CALL" && appt.status === "CONFIRMED" && appt.doctorId === doctor.id && (
-            <StartCallButton id={appt.id} label={appt.videoRoomName ? "Rejoin video call" : "Start video call"} />
+            <CallButton
+              calleeId={appt.patientId}
+              name={`${appt.patient.firstName} ${appt.patient.lastName}`}
+              basePath="/doctor"
+              appointmentId={appt.id}
+              label="Call patient"
+            />
           )}
           <AppointmentStatusButtons id={appt.id} status={appt.status} assignedToMe={appt.doctorId === doctor.id} />
         </div>

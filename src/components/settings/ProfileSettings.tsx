@@ -129,6 +129,7 @@ export default function ProfileSettings({ profile }: { profile: Profile }) {
   };
 
   const fullName = `${profile.firstName} ${profile.lastName}`;
+  const isPatient = profile.role === "PATIENT";
 
   return (
     <div className="settings">
@@ -193,8 +194,12 @@ export default function ProfileSettings({ profile }: { profile: Profile }) {
             ) : (
               <Field label="Name:" name="firstName" editing={false} display={fullName} />
             )}
-            <Field label="Email" name="email" type="email" editing={editing} display={profile.email} defaultValue={profile.email} required />
-            <Field label="Phone Number:" name="phone" type="tel" editing={editing} display={profile.phone} defaultValue={profile.phone} />
+            <Field label="Email" name="email" type="email" editing={editing} display={profile.email} defaultValue={profile.email} required={!isPatient} />
+            {isPatient ? (
+              <Field label="Phone Number:" name="phone" editing={false} display={profile.phone && `${profile.phone} (you sign in with this; the clinic can change it)`} />
+            ) : (
+              <Field label="Phone Number:" name="phone" type="tel" editing={editing} display={profile.phone} defaultValue={profile.phone} />
+            )}
             <Field label="SMS Notifications:" name="smsOptIn" editing={editing} display={profile.smsOptIn ? "On" : "Off"}>
               <label className="checkbox-line detail-input-plain">
                 <input id="f-smsOptIn" type="checkbox" name="smsOptIn" defaultChecked={profile.smsOptIn} /> Receive text messages

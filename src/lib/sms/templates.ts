@@ -26,6 +26,9 @@ const where = (a: Appt, hospital?: string | null) =>
 
 const drName = (d?: Person | null) => (d ? `Dr. ${d.lastName ?? d.firstName}` : "a doctor");
 
+/** Video visits happen in the app: the doctor rings the patient there. */
+const videoHint = (a: Appt) => (a.visitType === "VIDEO_CALL" ? ` Sign in to ${SMS_BRAND} at that time and your doctor will call you.` : "");
+
 /**
  * Replaces characters outside the GSM-7 SMS alphabet that sneak in via Intl formatting or copy-paste
  * (non-breaking spaces, curly quotes, dashes). Otherwise the whole SMS is sent as UCS-2,
@@ -44,8 +47,8 @@ const templates = {
   appointmentRequested: (p: Person, a: Appt) =>
     `${SMS_BRAND}: Hi ${p.firstName}, we received your appointment request for ${when(a.startsAt)}. We'll text you once it's confirmed.`,
 
-  appointmentConfirmed: (p: Person, a: Appt, doctor?: Person | null, hospital?: string | null, callLink?: string | null) =>
-    `${SMS_BRAND}: Hi ${p.firstName}, your appointment with ${drName(doctor)} is confirmed for ${when(a.startsAt)}${where(a, hospital)}.${callLink ? ` At that time, open this link to start the call: ${callLink}` : ""}`,
+  appointmentConfirmed: (p: Person, a: Appt, doctor?: Person | null, hospital?: string | null) =>
+    `${SMS_BRAND}: Hi ${p.firstName}, your appointment with ${drName(doctor)} is confirmed for ${when(a.startsAt)}${where(a, hospital)}.${videoHint(a)}`,
 
   appointmentRejected: (p: Person, a: Appt) =>
     `${SMS_BRAND}: Hi ${p.firstName}, we couldn't confirm your appointment request for ${when(a.startsAt)}. Please contact us to choose another time.`,
@@ -53,11 +56,14 @@ const templates = {
   appointmentCancelled: (p: Person, a: Appt) =>
     `${SMS_BRAND}: Hi ${p.firstName}, your appointment on ${when(a.startsAt)} has been cancelled. Please contact us to rebook.`,
 
-  patientReminder: (p: Person, a: Appt, doctor?: Person | null, hospital?: string | null, callLink?: string | null) =>
-    `${SMS_BRAND}: Reminder, ${p.firstName}: you have an appointment with ${drName(doctor)} on ${when(a.startsAt)}${where(a, hospital)}.${callLink ? ` Start the call here: ${callLink}` : ""}`,
+  patientReminder: (p: Person, a: Appt, doctor?: Person | null, hospital?: string | null) =>
+    `${SMS_BRAND}: Reminder, ${p.firstName}: you have an appointment with ${drName(doctor)} on ${when(a.startsAt)}${where(a, hospital)}.${videoHint(a)}`,
 
-  videoCallLink: (p: Person, doctor: Person | null | undefined, link: string) =>
-    `${SMS_BRAND}: Hi ${p.firstName}, ${drName(doctor)} is ready for your video call. Join on your phone here: ${link}`,
+  missedCall: (p: Person, from: string) =>
+    `${SMS_BRAND}: Hi ${p.firstName}, you missed a video call from ${from}. Sign in to ${SMS_BRAND} to call back.`,
+
+  loginCode: (code: string) =>
+    `${SMS_BRAND}: ${code} is your sign-in code. It expires in 10 minutes. Never share it with anyone.`,
 
   followUpReminder: (p: Person, date: Date, doctor?: Person | null) =>
     `${SMS_BRAND}: Hi ${p.firstName}, your follow-up with ${drName(doctor)} is due on ${smsDate(date)}. Please contact us to book a visit.`,
@@ -77,9 +83,6 @@ const templates = {
 
   doctorCancelled: (patient: Person, a: Appt) =>
     `${SMS_BRAND}: Cancelled: ${patient.firstName} ${patient.lastName ?? ""}'s appointment on ${when(a.startsAt)}.`,
-
-  doctorPatientStartedCall: (patient: Person, link: string) =>
-    `${SMS_BRAND}: ${patient.firstName} ${patient.lastName ?? ""} has started your video visit and is waiting. Join: ${link}`,
 
   doctorDailySchedule: (doctor: Person, count: number, first: Date) =>
     `${SMS_BRAND}: Good morning Dr. ${doctor.lastName ?? doctor.firstName}. You have ${count} appointment${count === 1 ? "" : "s"} today, starting at ${smsTime(first)}.`,

@@ -11,7 +11,7 @@ import {
   type SmsSummary,
 } from "@/components/chat/types";
 
-/** Roles that can open the chat (everyone else takes part by SMS). */
+/** Roles that can open the chat (everyone signed in; patients who never sign in take part by SMS). */
 export const CHAT_ROLES = PORTAL_ROLES;
 
 export const chatUserSelect = {
@@ -49,11 +49,12 @@ export async function isParticipant(conversationId: string, userId: string) {
 }
 
 /**
- * Who `me` may add to conversations. Doctors are limited to their own patients;
- * admins and the staff roles work across the whole clinic, so they can reach anyone.
+ * Who `me` may add to conversations. Patients reach only their own doctors and doctors only their
+ * own patients; admins and the staff roles work across the whole clinic, so they can reach anyone.
  */
 function contactsWhere(me: Pick<User, "id" | "role">): Prisma.UserWhereInput {
   const base: Prisma.UserWhereInput = { isActive: true, id: { not: me.id } };
+  if (me.role === Role.PATIENT) return { ...base, role: Role.DOCTOR, doctorAppointments: { some: { patientId: me.id } } };
   if (me.role !== Role.DOCTOR) return base;
   return {
     ...base,

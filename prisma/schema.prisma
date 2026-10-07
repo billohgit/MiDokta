@@ -70,6 +70,15 @@ enum CheckoutStatus {
   EXPIRED
 }
 
+enum CallStatus {
+  RINGING
+  ACCEPTED
+  DECLINED
+  MISSED
+  CANCELLED
+  ENDED
+}
+
 enum StockMovementType {
   RECEIVED
   DISPENSED
@@ -177,6 +186,8 @@ model User {
   messages            Message[]
   smsMessages         SmsMessage[]              @relation("SmsRecipient")
   smsSent             SmsMessage[]              @relation("SmsSender")
+  callsMade           Call[]                    @relation("CallsMade")
+  callsReceived       Call[]                    @relation("CallsReceived")
 
   @@index([role])
 }
@@ -189,11 +200,6 @@ model Appointment {
   endsAt             DateTime?
   status             AppointmentStatus @default(PENDING)
   visitType          VisitType         @default(IN_PERSON)
-  // Video visits: the Daily room, and the secret in the patient's join link (/call/<key>).
-  videoRoomName      String?
-  videoRoomUrl       String?
-  videoRoomExpiresAt DateTime?
-  videoPatientKey    String?           @unique
   doctorId           String?
   doctor             User?             @relation("DoctorAppointments", fields: [doctorId], references: [id])
   patientId          String
@@ -205,6 +211,7 @@ model Appointment {
 
   record   MedicalRecord?
   invoices Invoice[]
+  calls    Call[]
 
   @@index([startsAt])
   @@index([status])
@@ -471,4 +478,46 @@ model SmsMessage {
   @@index([createdAt])
   @@index([userId])
   @@index([messageId])
+}
+
+/// A video call placed in the app: one person rings another, who answers or declines (src/lib/calls.ts).
+model Call {
+  id            String       @id @default(cuid())
+  callerId      String
+  caller        User         @relation("CallsMade", fields: [callerId], references: [id], onDelete: Cascade)
+  calleeId      String
+  callee        User         @relation("CallsReceived", fields: [calleeId], references: [id], onDelete: Cascade)
+  /// The visit this call belongs to, so the doctor can write it up.
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  status        CallStatus   @default(RINGING)
+  /// The private Daily room both sides join once the call is answered.
+  roomName      String
+  roomUrl       String
+  roomExpiresAt DateTime
+  /// Updated while each side has the call open, so abandoned calls can be ended.
+  callerSeenAt  DateTime     @default(now())
+  calleeSeenAt  DateTime?
+  answeredAt    DateTime?
+  endedAt       DateTime?
+  createdAt     DateTime     @default(now())
+
+  @@index([calleeId, status])
+  @@index([callerId, status])
+}
+
+/// A one-time code texted to a patient's phone to sign in (src/lib/login-codes.ts).
+model LoginCode {
+  id         String    @id @default(cuid())
+  /// Normalised E.164 number the code was sent to.
+  phone      String
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  /// Set when the code was right but the number belongs to several patients, who must pick one.
+  verifiedAt DateTime?
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
 }

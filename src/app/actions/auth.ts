@@ -14,6 +14,7 @@ import { normalizePhone } from "@/lib/sms/phone";
 import { COUNTRIES, withCountryCode } from "@/lib/countries";
 import { notifyRoles } from "@/lib/notifications";
 import { SIGNUP_ROLES } from "@/lib/roles";
+import { checkLoginCode, redeemLoginCode, sendLoginCode } from "@/lib/login-codes";
 
 export type LoginMethod = "email" | "phone";
 export type LoginState = { error: string | null; method: LoginMethod; identifier: string; country: string };
@@ -56,6 +57,82 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
 
   await createSession(user.id);
   redirect(home);
+}
+
+export type PatientLoginStep = "phone" | "code" | "choose";
+export type PatientLoginState = {
+  step: PatientLoginStep;
+  error: string | null;
+  notice: string | null;
+  country: string;
+  /** The number as typed, to refill the form. */
+  identifier: string;
+  /** Normalised number the code went to. */
+  phone: string;
+  /** When several patients share the number: who to sign in as, once the code is right. */
+  codeId: string | null;
+  choices: { id: string; name: string }[];
+};
+
+/**
+ * Patient sign-in, one step per submit: send a code to the phone number, check the code, and (when
+ * several patients share the number) pick who is signing in.
+ */
+export async function patientLogin(prev: PatientLoginState, formData: FormData): Promise<PatientLoginState> {
+  const intent = String(formData.get("intent") ?? "");
+  const state = { ...prev, error: null, notice: null };
+  const fail = (error: string, patch: Partial<PatientLoginState> = {}): PatientLoginState => ({ ...state, ...patch, error });
+
+  if (intent === "back") return { ...state, step: "phone", codeId: null, choices: [] };
+
+  if (intent === "send" || intent === "resend") {
+    const identifier = intent === "send" ? String(formData.get("identifier") ?? "").trim() : prev.identifier;
+    const country = intent === "send" ? String(formData.get("country") ?? "") : prev.country;
+    const code = COUNTRIES.find((c) => c.iso === country)?.code;
+    const phone = code && identifier ? normalizePhone(withCountryCode(code, identifier)) : null;
+    if (!phone) return fail("Enter a valid phone number for the selected country.", { identifier, country });
+
+    const sent = await sendLoginCode(phone);
+    if (!sent.ok) return fail(sent.error, { identifier, country });
+    return {
+      ...state,
+      step: "code",
+      identifier,
+      country,
+      phone,
+      notice: "If this number is registered with the clinic, a 6-digit code is on its way by text.",
+    };
+  }
+
+  if (intent === "verify") {
+    const code = String(formData.get("code") ?? "").trim();
+    if (!/^\d{6}$/.test(code.replace(/\s/g, ""))) return fail("Enter the 6-digit code from the text message.");
+    const check = await checkLoginCode(prev.phone, code.replace(/\s/g, ""));
+    if (!check.ok) return fail(check.error);
+    if (check.patients.length > 1) {
+      return {
+        ...state,
+        step: "choose",
+        codeId: check.codeId,
+        choices: check.patients.map((p) => ({ id: p.id, name: `${p.firstName} ${p.lastName}` })),
+      };
+    }
+    return signInPatient(check.codeId, check.patients[0].id, fail);
+  }
+
+  // The "who is signing in" buttons submit only the chosen patient's id.
+  if (prev.step === "choose" && prev.codeId && formData.has("userId")) {
+    return signInPatient(prev.codeId, String(formData.get("userId") ?? ""), fail);
+  }
+  return fail("Something went wrong. Start again.", { step: "phone" });
+}
+
+async function signInPatient(codeId: string, userId: string, fail: (e: string, p?: Partial<PatientLoginState>) => PatientLoginState) {
+  if (!(await redeemLoginCode(codeId, userId))) {
+    return fail("That code has expired. Send a new one.", { step: "phone", codeId: null, choices: [] });
+  }
+  await createSession(userId);
+  redirect(PORTAL_HOME.PATIENT!);
 }
 
 export async function logout() {

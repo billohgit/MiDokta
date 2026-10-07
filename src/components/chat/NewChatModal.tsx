@@ -6,9 +6,15 @@ import Avatar from "@/components/appointments/Avatar";
 import Modal from "@/components/ui/Modal";
 import { type ChatUser, ROLE_LABEL, displayName } from "./types";
 
-type Props = { contacts: ChatUser[]; onClose: () => void; onOpened: (conversationId: string) => void };
+type Props = {
+  contacts: ChatUser[];
+  /** Patients only start one-to-one chats with their doctors. */
+  allowGroups?: boolean;
+  onClose: () => void;
+  onOpened: (conversationId: string) => void;
+};
 
-export default function NewChatModal({ contacts, onClose, onOpened }: Props) {
+export default function NewChatModal({ contacts, allowGroups = true, onClose, onOpened }: Props) {
   const [mode, setMode] = useState<"direct" | "group">("direct");
   const [query, setQuery] = useState("");
   const [title, setTitle] = useState("");
@@ -57,14 +63,16 @@ export default function NewChatModal({ contacts, onClose, onOpened }: Props) {
 
   return (
     <Modal title="New Conversation" onClose={onClose}>
-      <div className="segmented chat-mode" role="tablist">
-        <button role="tab" aria-selected={mode === "direct"} className={mode === "direct" ? "on" : ""} onClick={() => setMode("direct")}>
-          <i className="fa-solid fa-user btn-icon" /> Direct message
-        </button>
-        <button role="tab" aria-selected={mode === "group"} className={mode === "group" ? "on" : ""} onClick={() => setMode("group")}>
-          <i className="fa-solid fa-users btn-icon" /> Group
-        </button>
-      </div>
+      {allowGroups && (
+        <div className="segmented chat-mode" role="tablist">
+          <button role="tab" aria-selected={mode === "direct"} className={mode === "direct" ? "on" : ""} onClick={() => setMode("direct")}>
+            <i className="fa-solid fa-user btn-icon" /> Direct message
+          </button>
+          <button role="tab" aria-selected={mode === "group"} className={mode === "group" ? "on" : ""} onClick={() => setMode("group")}>
+            <i className="fa-solid fa-users btn-icon" /> Group
+          </button>
+        </div>
+      )}
 
       {mode === "group" && (
         <label className="field chat-group-name">
@@ -77,17 +85,19 @@ export default function NewChatModal({ contacts, onClose, onOpened }: Props) {
         <i className="fa-solid fa-magnifying-glass" />
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search people..." autoFocus />
       </label>
-      <div className="contact-filter">
-        {(["ALL", "STAFF", "PATIENT"] as const).map((r) => (
-          <button key={r} type="button" className={roleFilter === r ? "on" : ""} onClick={() => setRoleFilter(r)}>
-            {r === "ALL" ? "Everyone" : r === "STAFF" ? "Medical staff" : "Patients"}
-          </button>
-        ))}
-      </div>
+      {allowGroups && (
+        <div className="contact-filter">
+          {(["ALL", "STAFF", "PATIENT"] as const).map((r) => (
+            <button key={r} type="button" className={roleFilter === r ? "on" : ""} onClick={() => setRoleFilter(r)}>
+              {r === "ALL" ? "Everyone" : r === "STAFF" ? "Medical staff" : "Patients"}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="contact-list">
         {filtered.length === 0 ? (
-          <p className="chat-empty-list">No one found.</p>
+          <p className="chat-empty-list">{allowGroups ? "No one found." : "Your doctors appear here once you have an appointment with them."}</p>
         ) : (
           filtered.map((c) =>
             mode === "direct" ? (

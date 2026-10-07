@@ -19,6 +19,7 @@ export type SmsCategory =
   | "DAILY_SCHEDULE"
   | "INVOICE_CREATED"
   | "PAYMENT_RECEIVED"
+  | "LOGIN_CODE"
   | "CHAT";
 
 type SmsInput = {
@@ -30,7 +31,13 @@ type SmsInput = {
   sentById?: string;
   /** The chat message this SMS delivers. */
   messageId?: string;
+  /** Send even if the user turned texts off (sign-in codes, which they asked for). */
+  ignoreOptOut?: boolean;
 };
+
+/** Sign-in codes are kept out of the SMS log once the text has gone (or failed). */
+const redact = (m: { category: string; body: string }) =>
+  m.category === "LOGIN_CODE" ? { body: m.body.replace(/\d{6}/g, "******") } : {};
 
 const DELIVERY_CONCURRENCY = 5;
 
@@ -59,7 +66,7 @@ export async function queueSms(inputs: SmsInput | SmsInput[]) {
       ? "User not found"
       : !user.isActive
         ? "Account inactive"
-        : !user.smsOptIn
+        : !user.smsOptIn && !input.ignoreOptOut
           ? "Opted out of SMS"
           : !user.phone
             ? "No phone number"
@@ -104,7 +111,7 @@ export async function deliverSms(ids: string[]) {
           // Re-checked here because retries and the scheduled job also land in this path.
           const blocked = allowlistBlock(m.to);
           if (blocked) {
-            await prisma.smsMessage.update({ where: { id: m.id }, data: { status: "SKIPPED", error: blocked } });
+            await prisma.smsMessage.update({ where: { id: m.id }, data: { status: "SKIPPED", error: blocked, ...redact(m) } });
             return;
           }
 
@@ -117,12 +124,18 @@ export async function deliverSms(ids: string[]) {
               providerMessageId: result.providerMessageId,
               sentAt: new Date(),
               error: null,
+              ...redact(m),
             },
           });
         } catch (e) {
           await prisma.smsMessage.update({
             where: { id: m.id },
-            data: { status: "FAILED", provider: provider.name, error: e instanceof Error ? e.message.slice(0, 500) : "Send failed" },
+            data: {
+              status: "FAILED",
+              provider: provider.name,
+              error: e instanceof Error ? e.message.slice(0, 500) : "Send failed",
+              ...redact(m),
+            },
           });
         }
       })

@@ -16,7 +16,8 @@ export function toProfile(user: User): Profile {
   return {
     firstName: user.firstName,
     lastName: user.lastName,
-    email: user.email,
+    // Patients registered without an email have a placeholder address; show it as blank.
+    email: displayEmail(user.email) ?? "",
     role: user.role,
     avatarUrl: user.avatarUrl,
     phone: user.phone,

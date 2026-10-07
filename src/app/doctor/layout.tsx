@@ -10,6 +10,7 @@ const NAV = [
   { href: "/doctor/dashboard", label: "Dashboard", icon: "fa-table-cells-large" },
   { href: "/doctor/appointments", label: "Appointments", icon: "fa-calendar-plus" },
   { href: "/doctor/patients", label: "Patients", icon: "fa-bed-pulse" },
+  { href: "/doctor/calls", label: "Video Calls", icon: "fa-video" },
   { href: "/doctor/chat", label: "Chat", icon: "fa-comments" },
   { href: "/doctor/settings", label: "Settings", icon: "fa-gear" },
 ];
@@ -19,7 +20,7 @@ export default async function DoctorLayout({ children }: { children: React.React
   const chatUnread = await unreadMessageCount(doctor.id);
 
   return (
-    <PortalShell nav={NAV} basePath="/doctor" initialChatUnread={chatUnread} user={topbarUser(doctor)}>
+    <PortalShell nav={NAV} basePath="/doctor" initialChatUnread={chatUnread} user={topbarUser(doctor)} calls>
       {children}
     </PortalShell>
   );

@@ -6,7 +6,7 @@ import { markConversationRead, sendMessage } from "@/app/actions/chat";
 import Avatar from "@/components/appointments/Avatar";
 import NewChatModal from "./NewChatModal";
 import GroupInfoPanel from "./GroupInfoPanel";
-import ChatCallButton from "@/components/video/ChatCallButton";
+import CallButton from "@/components/calls/CallButton";
 import {
   type ChatMessage,
   type ChatUser,
@@ -125,12 +125,17 @@ export default function ChatApp({ me, contacts, initialConversations, initialCon
             onToggleInfo={() => setShowInfo((s) => !s)}
             onActivity={refreshConversations}
             onRead={clearUnread}
+            basePath={`/${pathname.split("/")[1]}`}
           />
         ) : (
           <div className="chat-placeholder">
             <i className="fa-regular fa-comments" />
             <h3>{activeId ? "Loading conversation..." : "Select a conversation"}</h3>
-            <p>Message colleagues in the app, and patients by SMS — all from one chat.</p>
+            <p>
+              {me.role === "PATIENT"
+                ? "Message your doctors. They reply here, and you can video call them from the chat."
+                : "Message colleagues and patients in the app, with an SMS copy for patients who don't sign in."}
+            </p>
             <button className="btn btn-primary btn-sm" onClick={() => setModal("new")}>
               Start a new chat
             </button>
@@ -155,6 +160,7 @@ export default function ChatApp({ me, contacts, initialConversations, initialCon
       {modal === "new" && (
         <NewChatModal
           contacts={contacts}
+          allowGroups={me.role !== "PATIENT"}
           onClose={() => setModal(null)}
           onOpened={async (id) => {
             setModal(null);
@@ -210,9 +216,11 @@ type ThreadProps = {
   onToggleInfo: () => void;
   onActivity: () => void;
   onRead: () => void;
+  /** The portal root, e.g. "/doctor", for the call screen's address. */
+  basePath: string;
 };
 
-function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, onRead }: ThreadProps) {
+function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, onRead, basePath }: ThreadProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
@@ -220,7 +228,8 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [alsoSms, setAlsoSms] = useState(true);
+  // Patients' messages are never texted (the server enforces it too).
+  const [alsoSms, setAlsoSms] = useState(me.role !== "PATIENT");
 
   const scroller = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
@@ -430,8 +439,8 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
             {subtitle}
           </small>
         </div>
-        {me.role === "DOCTOR" && !conversation.isGroup && other?.role === "PATIENT" && (
-          <ChatCallButton patientId={other.id} name={`${other.firstName} ${other.lastName}`} />
+        {!conversation.isGroup && other && callable(me, other) && (
+          <CallButton calleeId={other.id} name={displayName(other)} basePath={basePath} compact />
         )}
         {conversation.isGroup && (
           <button className="icon-btn" onClick={onToggleInfo} aria-label="Group info" title="Group info">
@@ -504,7 +513,7 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
         {error && <p className="form-error composer-error">{error}</p>}
         {notice && !error && <p className="composer-note warn-text">{notice}</p>}
         <div className="composer-options">
-          {appUsers.length > 0 && (
+          {appUsers.length > 0 && me.role !== "PATIENT" && (
             <label className="checkbox-line compact">
               <input type="checkbox" checked={alsoSms} onChange={(e) => setAlsoSms(e.target.checked)} />
               {smsOnly.length > 0 ? "Also text app users" : "Also send by SMS"}
@@ -580,6 +589,10 @@ function SmsStatus({ summary: s, live }: { summary: SmsSummary; live: boolean })
     </span>
   );
 }
+
+/** Doctors video call their patients from the chat, and patients their doctors. */
+const callable = (me: ChatUser, other: ChatUser) =>
+  (me.role === "DOCTOR" && other.role === "PATIENT") || (me.role === "PATIENT" && other.role === "DOCTOR");
 
 function senderFirstName(c: ConversationSummary, id: string) {
   return c.participants.find((p) => p.id === id)?.firstName ?? "Someone";

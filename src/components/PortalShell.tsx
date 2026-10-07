@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar, { type NavItem } from "./Sidebar";
 import Topbar, { type TopbarUser } from "./Topbar";
+import IncomingCallWatcher from "./calls/IncomingCallWatcher";
 
 /** `basePath` is the portal root, e.g. "/admin". `badges` adds counts to other nav items, keyed by href. */
 type Props = {
@@ -12,12 +13,14 @@ type Props = {
   user: TopbarUser;
   initialChatUnread: number;
   badges?: Record<string, number>;
+  /** Doctors and patients can be rung: watch for incoming video calls on every page. */
+  calls?: boolean;
   children: React.ReactNode;
 };
 
 const CHAT_UNREAD_POLL_MS = 15_000;
 
-export default function PortalShell({ nav, basePath, user, initialChatUnread, badges, children }: Props) {
+export default function PortalShell({ nav, basePath, user, initialChatUnread, badges, calls, children }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -61,6 +64,7 @@ export default function PortalShell({ nav, basePath, user, initialChatUnread, ba
         <Topbar title={title} user={user} basePath={basePath} onToggle={toggle} />
         {children}
       </main>
+      {calls && <IncomingCallWatcher basePath={basePath} />}
     </div>
   );
 }

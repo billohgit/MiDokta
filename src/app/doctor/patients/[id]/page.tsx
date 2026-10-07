@@ -7,6 +7,8 @@ import { patientRecords } from "@/lib/records";
 import PatientSummary from "@/components/patients/PatientSummary";
 import MedicalHistory from "@/components/records/MedicalHistory";
 import AppointmentTable from "@/components/appointments/AppointmentTable";
+import CallButton from "@/components/calls/CallButton";
+import { videoConfigured } from "@/lib/calls";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +38,13 @@ export default async function DoctorPatientDetailPage({ params }: { params: Prom
         <i className="fa-solid fa-arrow-left" /> My patients
       </Link>
 
-      <PatientSummary patient={patient} />
+      <PatientSummary
+        patient={patient}
+        actions={
+          videoConfigured() &&
+          patient.isActive && <CallButton calleeId={patient.id} name={`${patient.firstName} ${patient.lastName}`} basePath="/doctor" />
+        }
+      />
 
       <h2 className="section-heading detail-section-heading">Medical History</h2>
       <MedicalHistory records={records} />

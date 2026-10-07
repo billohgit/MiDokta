@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Gender, Prisma } from "@prisma/client";
+import { Gender, Prisma, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { authorize } from "@/lib/auth";
 import { PHONE_HINT, checkbox, phoneValue } from "@/lib/form";
@@ -22,14 +22,17 @@ export async function updateProfile(formData: FormData): Promise<ActionResult> {
 
   const firstName = text(formData, "firstName");
   const lastName = text(formData, "lastName");
-  const email = text(formData, "email");
-  if (!firstName || !lastName || !email) return { ok: false, error: "Name and email are required." };
+  // Many patients have no email (they sign in by phone): blank keeps whatever is on file.
+  const isPatient = user.role === Role.PATIENT;
+  const email = text(formData, "email") ?? (isPatient ? user.email : null);
+  if (!firstName || !lastName || !email) return { ok: false, error: isPatient ? "Name is required." : "Name and email are required." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "Enter a valid email address." };
 
   const gender = text(formData, "gender") as Gender | null;
   if (gender && !Object.values(Gender).includes(gender)) return { ok: false, error: "Invalid gender." };
 
-  const phone = phoneValue(formData, "phone");
+  // A patient's phone number is how they sign in, so only the clinic changes it.
+  const phone = isPatient ? user.phone : phoneValue(formData, "phone");
   if (phone === undefined) return { ok: false, error: PHONE_HINT };
 
   const dob = text(formData, "dateOfBirth");
