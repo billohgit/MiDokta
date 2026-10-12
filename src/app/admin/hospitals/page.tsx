@@ -24,6 +24,8 @@ export default async function AdminHospitalsPage() {
     city: h.city,
     phone: h.phone,
     email: h.email,
+    latitude: h.latitude,
+    longitude: h.longitude,
     isActive: h.isActive,
     staff: h._count.staff,
     doctors: doctorCounts.find((d) => d.hospitalId === h.id)?._count._all ?? 0,

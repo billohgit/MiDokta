@@ -12,6 +12,8 @@ export type HospitalRow = {
   city: string | null;
   phone: string | null;
   email: string | null;
+  latitude: number | null;
+  longitude: number | null;
   isActive: boolean;
   staff: number;
   doctors: number;
@@ -75,6 +77,21 @@ export default function HospitalsView({ hospitals }: { hospitals: HospitalRow[] 
               <p className="doctor-meta">
                 <i className="fa-solid fa-envelope" /> {h.email ?? "—"}
               </p>
+              <p className="doctor-meta">
+                <i className="fa-solid fa-map-pin" />{" "}
+                {h.latitude !== null && h.longitude !== null ? (
+                  <a
+                    className="table-link"
+                    href={`https://www.openstreetmap.org/?mlat=${h.latitude}&mlon=${h.longitude}#map=17/${h.latitude}/${h.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    On the map
+                  </a>
+                ) : (
+                  "No map position: patients won't be directed here"
+                )}
+              </p>
 
               <div className="doctor-stats three">
                 <div>
@@ -127,7 +144,28 @@ export default function HospitalsView({ hospitals }: { hospitals: HospitalRow[] 
 }
 
 function HospitalForm({ hospital, onClose }: { hospital: HospitalRow | null; onClose: () => void }) {
-  const { busy, error, submitWith } = useServerAction();
+  const { busy, error, setError, submitWith } = useServerAction();
+  const [lat, setLat] = useState(hospital?.latitude?.toString() ?? "");
+  const [lng, setLng] = useState(hospital?.longitude?.toString() ?? "");
+  const [locating, setLocating] = useState(false);
+
+  // For an admin standing at the hospital: fill in where they are.
+  const useCurrentLocation = () => {
+    if (!("geolocation" in navigator)) return setError("This browser can't share its location.");
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        setLat(p.coords.latitude.toFixed(6));
+        setLng(p.coords.longitude.toFixed(6));
+        setLocating(false);
+      },
+      () => {
+        setError("Couldn't get your location. Allow location access, or type the coordinates.");
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 15_000 }
+    );
+  };
 
   return (
     <Modal title={hospital ? `Edit ${hospital.name}` : "Add Hospital"} onClose={onClose}>
@@ -153,6 +191,20 @@ function HospitalForm({ hospital, onClose }: { hospital: HospitalRow | null; onC
           <span>City</span>
           <input name="city" defaultValue={hospital?.city ?? ""} />
         </label>
+        <label className="field">
+          <span>Latitude</span>
+          <input name="latitude" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} placeholder="e.g. 8.484400" />
+        </label>
+        <label className="field">
+          <span>Longitude</span>
+          <input name="longitude" inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} placeholder="e.g. -13.234400" />
+        </label>
+        <p className="field-hint full">
+          Lets Omega direct patients here. In Google Maps, right-click the hospital and click the numbers to copy them, or{" "}
+          <button type="button" className="link-btn" onClick={useCurrentLocation} disabled={locating}>
+            <i className="fa-solid fa-location-crosshairs" /> {locating ? "locating..." : "use my current location"}
+          </button>
+        </p>
         {error && <p className="form-error full">{error}</p>}
         <div className="modal-actions full">
           <button type="button" className="btn btn-outline" onClick={onClose}>

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { topbarUser } from "@/lib/people";
 import { unreadMessageCount } from "@/lib/chat";
+import OmegaAssistant from "@/components/omega/OmegaAssistant";
+import MedicationReminders from "@/components/omega/MedicationReminders";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,9 @@ export default async function PatientLayout({ children }: { children: React.Reac
       calls
     >
       {children}
+      {/* Omega, the AI assistant, and its spoken medication reminders: patients only. */}
+      <OmegaAssistant firstName={patient.firstName} />
+      <MedicationReminders firstName={patient.firstName} />
     </PortalShell>
   );
 }

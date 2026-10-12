@@ -1398,3 +1398,93 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
 .my-invoice-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
 .my-invoice-pay { border-top: 1px solid var(--border); padding-top: 16px; }
 @media (max-width: 992px) { .patient-home { grid-template-columns: 1fr; } }
+
+/* ---- Omega, the patient's AI assistant (src/components/omega) ---- */
+:root { --omega: #1e63d6; --omega-dark: #13308a; --omega-soft: #e8f0fe; }
+.omega-fab {
+  position: fixed; right: 20px; bottom: 20px; z-index: 60; display: flex; align-items: center; gap: 10px;
+  padding: 5px 18px 5px 5px; border-radius: 999px; background: var(--omega); color: #fff; font-weight: 600;
+  box-shadow: 0 6px 20px rgba(30, 99, 214, 0.35);
+}
+.omega-fab img { width: 46px; height: 46px; border-radius: 50%; background: #fff; }
+.omega-fab.open { padding: 5px; }
+.omega-fab:hover { filter: brightness(1.05); }
+
+.omega-panel {
+  position: fixed; right: 20px; bottom: 86px; z-index: 60; width: 390px; max-height: min(640px, calc(100dvh - 110px));
+  display: flex; flex-direction: column; background: var(--card); border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(19, 48, 138, 0.22); overflow: hidden;
+}
+.omega-head { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 14px; background: linear-gradient(135deg, var(--omega), var(--omega-dark)); color: #fff; }
+.omega-head .icon-btn { color: #fff; }
+.omega-head .icon-btn:hover { background: rgba(255, 255, 255, 0.15); }
+.omega-avatar { width: 42px; height: 42px; border-radius: 50%; background: #fff; }
+.omega-title { flex: 1; display: flex; flex-direction: column; line-height: 1.2; }
+.omega-title strong { font-size: 17px; }
+.omega-title small { font-size: 12px; opacity: 0.85; }
+
+.omega-messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: #f7f9fc; }
+.omega-msg { max-width: 88%; padding: 10px 13px; border-radius: 14px; font-size: 14.5px; line-height: 1.45; white-space: pre-wrap; }
+.omega-msg.assistant { align-self: flex-start; background: #fff; border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.omega-msg.user { align-self: flex-end; background: var(--omega); color: #fff; border-bottom-right-radius: 4px; }
+.omega-msg.error { background: #fdecec; border-color: #f5c2c2; color: #8a1c1c; }
+.omega-typing { color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.omega-suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.omega-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; font-size: 13.5px; font-weight: 600;
+  background: var(--omega-soft); color: var(--omega-dark);
+}
+.omega-chip:hover:not(:disabled) { background: #d6e4fd; }
+
+.omega-input { display: flex; align-items: center; gap: 8px; padding: 10px; border-top: 1px solid var(--border); }
+.omega-input input { flex: 1; min-width: 0; height: 42px; padding: 0 14px; border: 1px solid #ced4da; border-radius: 999px; font: inherit; font-size: 15px; }
+.omega-input input:focus { outline: 2px solid var(--omega-soft); border-color: var(--omega); }
+.omega-mic, .omega-send {
+  flex: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px;
+}
+.omega-mic { background: var(--omega); color: #fff; }
+.omega-mic.listening { background: #d63939; animation: omega-listen 1.3s ease-out infinite; }
+@keyframes omega-listen {
+  0% { box-shadow: 0 0 0 0 rgba(214, 57, 57, 0.5); }
+  100% { box-shadow: 0 0 0 14px rgba(214, 57, 57, 0); }
+}
+.omega-send { color: var(--omega); }
+.omega-mic:disabled, .omega-send:disabled { opacity: 0.45; cursor: not-allowed; }
+.omega-disclaimer { padding: 0 12px 10px; font-size: 11.5px; color: var(--muted); text-align: center; }
+
+.omega-hospitals { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; white-space: normal; }
+.omega-map { width: 100%; height: 150px; border: 0; border-radius: 10px; background: var(--border); }
+.omega-navigate { height: auto; min-height: 40px; padding: 8px 12px; font-size: 14px; white-space: normal; text-align: center; }
+.omega-hospitals ul { list-style: none; display: flex; flex-direction: column; }
+.omega-hospitals li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.omega-hospitals li:last-child { border-bottom: none; }
+.omega-hospital-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.omega-hospital-info small { color: var(--muted); font-size: 12.5px; }
+.omega-hospital-actions { display: flex; align-items: center; gap: 4px; flex: none; }
+.omega-tag { margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; background: #e3f5f2; color: var(--brand-teal); }
+.omega-tag.emergency { background: #fdecec; color: #b71c1c; }
+.omega-note { color: var(--muted); font-size: 11.5px; }
+
+/* Spoken medication reminder */
+.omega-reminder {
+  position: fixed; left: 50%; top: 20px; z-index: 70; transform: translateX(-50%); width: min(460px, calc(100vw - 32px));
+  display: flex; gap: 12px; padding: 14px 16px; background: var(--card); border-radius: var(--radius);
+  border-left: 5px solid var(--omega); box-shadow: 0 12px 40px rgba(19, 48, 138, 0.25);
+}
+.omega-reminder-avatar { width: 48px; height: 48px; border-radius: 50%; flex: none; }
+.omega-reminder-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.omega-reminder-body strong { color: var(--omega-dark); display: flex; align-items: center; gap: 8px; }
+.omega-reminder-body ul { list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 14.5px; }
+.omega-reminder-body li span { color: var(--muted); }
+.omega-reminder-body li small { display: block; color: var(--muted); font-size: 12.5px; }
+.omega-reminder-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+@media (max-width: 600px) {
+  .omega-fab { right: 16px; bottom: 16px; }
+  .omega-fab span { display: none; }
+  .omega-fab, .omega-fab.open { padding: 4px; }
+  .omega-panel { left: 8px; right: 8px; bottom: 76px; width: auto; max-height: calc(100dvh - 90px); }
+}
+@media print { .omega-fab, .omega-panel, .omega-reminder { display: none; } }
+.field-hint { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.field-hint .link-btn { font-size: 13px; }

@@ -123,6 +123,9 @@ model Hospital {
   city      String?
   phone     String?
   email     String?
+  /// Map position, so patients can be directed to the nearest hospital (src/lib/omega/hospitals.ts).
+  latitude  Float?
+  longitude Float?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

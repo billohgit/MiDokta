@@ -64,5 +64,14 @@ export const playRingtone = () =>
     [400, 200, 400]
   );
 
+/** A soft two-note chime before a medication reminder is read aloud. */
+export function playChime() {
+  const c = audio();
+  if (!c) return;
+  c.resume().catch(() => {});
+  tone(c, [659], c.currentTime, 0.25, 0.12);
+  tone(c, [880], c.currentTime + 0.22, 0.4, 0.12);
+}
+
 /** What the caller hears while the other phone rings. */
 export const playRingback = () => loop((c, t) => tone(c, [440, 480], t, 1.2, 0.05), 4000);
