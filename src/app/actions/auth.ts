@@ -190,6 +190,7 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   if (typeof idCard === "string") return fail(idCard);
   if (password.length < MIN_PASSWORD_LENGTH) return fail(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
   if (password !== confirm) return fail("Passwords do not match.");
+  if (formData.get("acceptTerms") !== "on") return fail("Accept the Terms and Conditions to create an account.");
 
   // Phone numbers are stored as typed, so compare normalised values.
   const normalized = normalizePhone(phone);

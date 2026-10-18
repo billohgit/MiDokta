@@ -100,7 +100,8 @@ export async function startCheckout(invoice: Invoice, returnUrl: string): Promis
       description: `Payment for invoice ${number}`,
       successUrl: `${returnUrl}?paid=1`,
       cancelUrl: `${returnUrl}?cancelled=1`,
-      lineItems: [{ name: `Invoice ${number}`, price: { currency: CURRENCY, value: toMinor(balance) }, quantity: 1 }],
+      lineItems: [{ type: "custom", name: `Invoice ${number}`, price: { currency: CURRENCY, value: toMinor(balance) }, quantity: 1 }],
+      brandingOptions: { primaryColor: "#b71c1c" },
       metadata: { invoiceId: invoice.id },
     },
   });

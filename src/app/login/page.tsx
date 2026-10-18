@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PORTAL_HOME, getSessionUser } from "@/lib/auth";
 import Logo from "@/components/Logo";
@@ -21,6 +22,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <h1>Welcome back</h1>
         <p className="login-sub">Sign in to your account</p>
         <LoginTabs defaultCountry={DEFAULT_COUNTRY} initial={as === "staff" ? "staff" : "patient"} />
+        <p className="login-alt">
+          <Link href="/terms">Terms and Conditions</Link>
+        </p>
       </div>
     </main>
   );

@@ -123,6 +123,15 @@ export default function SignupForm({ defaultCountry }: { defaultCountry: string 
           <i className="fa-solid fa-lock" /> Your ID is stored privately and only administrators can see it. It is
           checked automatically with AI to confirm it matches your photo and name.
         </p>
+        <label className="checkbox-line terms-accept">
+          <input type="checkbox" name="acceptTerms" required />
+          <span>
+            I have read and agree to the{" "}
+            <Link href="/terms" target="_blank">
+              Terms and Conditions
+            </Link>
+          </span>
+        </label>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" className="btn btn-primary" disabled={pending}>
           {pending ? "Creating account..." : "Create Account"}
