@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Avatar from "@/components/appointments/Avatar";
+import { formatAverage } from "@/components/ratings/Stars";
 import DoctorFormModal from "./DoctorFormModal";
 import useDoctorActions from "./useDoctorActions";
 import type { DoctorRow, Hospital } from "./types";
@@ -84,7 +85,7 @@ export default function DoctorsView({ doctors, hospitals }: Props) {
                 </p>
               )}
 
-              <div className="doctor-stats">
+              <div className="doctor-stats three">
                 <div>
                   <strong>{d.totalAppointments}</strong>
                   <span>Appointments</span>
@@ -92,6 +93,13 @@ export default function DoctorsView({ doctors, hospitals }: Props) {
                 <div>
                   <strong>{d.upcomingAppointments}</strong>
                   <span>Upcoming</span>
+                </div>
+                <div>
+                  <strong>
+                    {d.rating ? formatAverage(d.rating.average) : "—"}
+                    {d.rating && <i className="fa-solid fa-star doctor-star" aria-hidden="true" />}
+                  </strong>
+                  <span>{d.rating ? `${d.rating.count} rating${d.rating.count === 1 ? "" : "s"}` : "No ratings"}</span>
                 </div>
               </div>
 

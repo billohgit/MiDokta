@@ -2,9 +2,12 @@ import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { upcomingEvents } from "@/lib/appointments";
+import { ratingSummary } from "@/lib/ratings";
 import StatCard from "@/components/StatCard";
 import Calendar from "@/components/Calendar";
 import UpcomingEvents from "@/components/UpcomingEvents";
+import RatingFeedback from "@/components/ratings/RatingFeedback";
+import { formatAverage } from "@/components/ratings/Stars";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +24,7 @@ export default async function DoctorDashboardPage() {
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 
-  const [hospital, today, pending, openRequests, upcomingCount, completed, patients, upcoming] = await Promise.all([
+  const [hospital, today, pending, openRequests, upcomingCount, completed, patients, upcoming, rating, feedback] = await Promise.all([
     doctor.hospitalId ? prisma.hospital.findUnique({ where: { id: doctor.hospitalId } }) : null,
     prisma.appointment.count({
       where: { ...mine, startsAt: { gte: startOfDay, lt: endOfDay }, status: { in: ["CONFIRMED", "COMPLETED"] } },
@@ -36,6 +39,14 @@ export default async function DoctorDashboardPage() {
       select: { patientId: true },
     }),
     upcomingEvents(mine),
+    ratingSummary(doctor.id),
+    // Shown without patient names, so patients can be candid.
+    prisma.doctorRating.findMany({
+      where: mine,
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+      select: { id: true, stars: true, comment: true, updatedAt: true },
+    }),
   ]);
 
   const stats = [
@@ -44,6 +55,7 @@ export default async function DoctorDashboardPage() {
     { label: "Upcoming", value: upcomingCount, icon: "fa-calendar-check" },
     { label: "Completed", value: completed, icon: "fa-circle-check" },
     { label: "My Patients", value: patients.length, icon: "fa-bed-pulse" },
+    { label: rating ? `Rating (${rating.count})` : "Rating", value: rating ? `${formatAverage(rating.average)} / 5` : "—", icon: "fa-star" },
   ];
 
   return (
@@ -71,6 +83,9 @@ export default async function DoctorDashboardPage() {
         <Calendar />
         <UpcomingEvents events={upcoming} />
       </section>
+
+      <h2 className="section-heading detail-section-heading">Patient feedback</h2>
+      <RatingFeedback ratings={feedback} empty="No ratings yet. Patients can rate a visit once it's completed." />
     </>
   );
 }

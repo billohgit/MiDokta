@@ -3,16 +3,18 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { videoConfigured } from "@/lib/calls";
 import { myUpcomingAppointments } from "@/lib/patient-portal";
+import { ratableVisits } from "@/lib/ratings";
 import AppointmentTable from "@/components/appointments/AppointmentTable";
 import UpcomingList from "@/components/patient-portal/UpcomingList";
 import RequestAppointmentButton from "@/components/patient-portal/RequestAppointmentButton";
+import VisitRatingList from "@/components/ratings/VisitRatingList";
 
 export const dynamic = "force-dynamic";
 
 export default async function PatientAppointmentsPage() {
   const patient = await requireUser(Role.PATIENT);
 
-  const [upcoming, all, doctors] = await Promise.all([
+  const [upcoming, all, doctors, visits] = await Promise.all([
     myUpcomingAppointments(patient.id),
     prisma.appointment.findMany({
       where: { patientId: patient.id },
@@ -21,6 +23,7 @@ export default async function PatientAppointmentsPage() {
       include: { doctor: { select: { firstName: true, lastName: true } } },
     }),
     prisma.user.findMany({ where: { role: Role.DOCTOR, isActive: true }, orderBy: { firstName: "asc" } }),
+    ratableVisits(patient.id, 10),
   ]);
   const upcomingIds = new Set(upcoming.map((a) => a.id));
 
@@ -37,6 +40,14 @@ export default async function PatientAppointmentsPage() {
       </div>
 
       <UpcomingList appointments={upcoming} canCall={videoConfigured()} />
+
+      {visits.length > 0 && (
+        <>
+          <h2 className="section-heading detail-section-heading">Rate your visits</h2>
+          <p className="section-sub">How was the consultation, and how did the doctor treat you? Your feedback helps the clinic improve.</p>
+          <VisitRatingList visits={visits} />
+        </>
+      )}
 
       <h2 className="section-heading detail-section-heading">Past and cancelled</h2>
       <AppointmentTable appointments={all.filter((a) => !upcomingIds.has(a.id))} />

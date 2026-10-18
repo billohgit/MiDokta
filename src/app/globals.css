@@ -1511,3 +1511,41 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
 .terms-accept { align-items: flex-start; min-height: 0; font-size: 14px; line-height: 1.5; }
 .terms-accept input { flex: none; margin-top: 1px; }
 .terms-accept a { color: #d32f2f; font-weight: 600; }
+
+/* ---------- Doctor ratings ---------- */
+.stars { display: inline-flex; gap: 2px; color: #f5a623; font-size: 16px; vertical-align: -1px; }
+.stars-sm { font-size: 13px; }
+.doctor-star { color: #f5a623; font-size: 15px; margin-left: 4px; vertical-align: 1px; }
+.profile-rating { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; color: var(--muted); font-size: 14px; margin: 2px 0 8px; }
+
+.visit-ratings { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 12px; }
+.visit-rating { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.visit-rating-head { display: flex; flex-direction: column; }
+.visit-rating-head small { color: var(--muted); font-size: 13px; }
+.rate-prompt { margin-bottom: 16px; }
+
+.rate-visit { display: flex; flex-direction: column; gap: 10px; }
+.star-picker { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+/* 44px targets: easy to tap on a phone. */
+.star-picker button {
+  width: 44px; height: 44px; display: grid; place-items: center;
+  font-size: 26px; color: #ced4da; border-radius: 8px;
+}
+.star-picker button.on { color: #f5a623; }
+.star-picker button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.star-picker-label { margin-left: 8px; color: var(--muted); font-size: 14px; }
+.rate-visit-text { width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 6px; font: inherit; font-size: 14px; resize: vertical; }
+.rate-visit-text:focus { outline: none; border-color: #d32f2f; }
+.rate-visit-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rate-visit-done { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 10px; }
+.rate-visit-done .stars { font-size: 18px; }
+.rate-visit-note { color: var(--muted); font-size: 14px; flex: 1; min-width: 140px; }
+.rate-visit-comment { width: 100%; margin: 0; color: var(--text); font-size: 14px; font-style: italic; }
+
+.rating-feedback { list-style: none; margin: 0; padding: 4px 20px; }
+.rating-feedback li { padding: 14px 0; }
+.rating-feedback li + li { border-top: 1px solid var(--border); }
+.rating-feedback-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.rating-feedback-head small { color: var(--muted); font-size: 13px; }
+.rating-feedback p { margin: 0; font-size: 14px; line-height: 1.5; }
+.rating-feedback-none { color: var(--muted); font-style: italic; }

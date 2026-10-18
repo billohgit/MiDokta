@@ -64,6 +64,45 @@ export async function requestAppointment(formData: FormData): Promise<ActionResu
   return { ok: true, id: appt.id };
 }
 
+const MAX_COMMENT_LENGTH = 500;
+
+/**
+ * A patient rates a completed visit from 1 to 5 stars, with an optional comment. Rating the same
+ * visit again replaces the earlier rating. The doctor is told about a new rating, without the
+ * patient's name.
+ */
+export async function rateVisit(appointmentId: string, stars: number, comment: string): Promise<ActionResult> {
+  const me = await authorize(Role.PATIENT);
+  if (!me) return DENIED;
+  if (!Number.isInteger(stars) || stars < 1 || stars > 5) return fail("Choose from 1 to 5 stars.");
+
+  const appt = await prisma.appointment.findFirst({
+    where: { id: appointmentId, patientId: me.id },
+    include: { rating: { select: { id: true } } },
+  });
+  if (!appt) return fail("Appointment not found.");
+  if (appt.status !== "COMPLETED" || !appt.doctorId) return fail("You can rate a visit once it's completed.");
+
+  const note = comment.trim().slice(0, MAX_COMMENT_LENGTH) || null;
+  await prisma.doctorRating.upsert({
+    where: { appointmentId },
+    create: { appointmentId, doctorId: appt.doctorId, patientId: me.id, stars, comment: note },
+    update: { stars, comment: note },
+  });
+
+  if (!appt.rating) {
+    await notifyUsers([appt.doctorId], {
+      type: "GENERAL",
+      title: "New patient rating",
+      body: `A patient rated their visit on ${formatDate(appt.startsAt.toISOString())} ${stars} out of 5 stars.`,
+      link: "/doctor/dashboard",
+    });
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 /** A patient cancels one of their own upcoming appointments or requests. */
 export async function cancelMyAppointment(id: string): Promise<ActionResult> {
   const me = await authorize(Role.PATIENT);

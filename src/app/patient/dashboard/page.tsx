@@ -6,11 +6,16 @@ import { unreadMessageCount } from "@/lib/chat";
 import { videoConfigured } from "@/lib/calls";
 import { formatMoney } from "@/lib/money";
 import { myDoctors, myUpcomingAppointments } from "@/lib/patient-portal";
+import { ratableVisits } from "@/lib/ratings";
 import StatCard from "@/components/StatCard";
 import UpcomingList from "@/components/patient-portal/UpcomingList";
 import DoctorList from "@/components/patient-portal/DoctorList";
+import VisitRatingList from "@/components/ratings/VisitRatingList";
 
 export const dynamic = "force-dynamic";
+
+/** Unrated visits from this far back are offered for rating on the dashboard. */
+const RATE_PROMPT_DAYS = 30;
 
 function greeting(now: Date) {
   const h = now.getHours();
@@ -20,7 +25,7 @@ function greeting(now: Date) {
 export default async function PatientDashboardPage() {
   const patient = await requireUser(Role.PATIENT);
 
-  const [upcoming, doctors, unread, open, records] = await Promise.all([
+  const [upcoming, doctors, unread, open, records, recentVisits] = await Promise.all([
     myUpcomingAppointments(patient.id),
     myDoctors(patient.id),
     unreadMessageCount(patient.id),
@@ -29,7 +34,10 @@ export default async function PatientDashboardPage() {
       select: { total: true, amountPaid: true },
     }),
     prisma.medicalRecord.count({ where: { patientId: patient.id } }),
+    ratableVisits(patient.id, 5),
   ]);
+  const promptSince = Date.now() - RATE_PROMPT_DAYS * 24 * 60 * 60 * 1000;
+  const toRate = recentVisits.filter((v) => !v.rating && v.startsAt.getTime() >= promptSince).slice(0, 1);
   const balance = open.reduce((sum, i) => sum + Number(i.total) - Number(i.amountPaid), 0);
   const canCall = videoConfigured();
 
@@ -71,6 +79,13 @@ export default async function PatientDashboardPage() {
           </span>
           <i className="fa-solid fa-chevron-right" />
         </Link>
+      )}
+
+      {toRate.length > 0 && (
+        <section className="rate-prompt">
+          <h2 className="section-heading">How was your visit?</h2>
+          <VisitRatingList visits={toRate} />
+        </section>
       )}
 
       <div className="patient-home">

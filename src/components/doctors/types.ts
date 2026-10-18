@@ -19,4 +19,5 @@ export type DoctorRow = {
   hospital: Hospital | null;
   totalAppointments: number;
   upcomingAppointments: number;
+  rating: { average: number; count: number } | null;
 };

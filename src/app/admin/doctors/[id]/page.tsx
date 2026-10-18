@@ -3,10 +3,13 @@ import { notFound } from "next/navigation";
 import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { personSelect } from "@/lib/people";
+import { ratingSummary } from "@/lib/ratings";
 import Avatar from "@/components/appointments/Avatar";
 import StatCard from "@/components/StatCard";
 import { STATUS_LABEL, VISIT_LABEL, formatDate, formatTime, fullName } from "@/components/appointments/shared";
 import DoctorDetailActions from "@/components/doctors/DoctorDetailActions";
+import RatingFeedback from "@/components/ratings/RatingFeedback";
+import Stars, { formatAverage } from "@/components/ratings/Stars";
 import type { DoctorRow } from "@/components/doctors/types";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +20,7 @@ export default async function AdminDoctorDetailPage({ params }: { params: Promis
   const { id } = await params;
   const now = new Date();
 
-  const [doctor, hospitals] = await Promise.all([
+  const [doctor, hospitals, rating, ratings] = await Promise.all([
     prisma.user.findFirst({
       where: { id, role: Role.DOCTOR },
       include: {
@@ -29,6 +32,13 @@ export default async function AdminDoctorDetailPage({ params }: { params: Promis
       },
     }),
     prisma.hospital.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    ratingSummary(id),
+    prisma.doctorRating.findMany({
+      where: { doctorId: id },
+      orderBy: { updatedAt: "desc" },
+      take: 50,
+      select: { id: true, stars: true, comment: true, updatedAt: true, patient: { select: personSelect } },
+    }),
   ]);
   if (!doctor) notFound();
 
@@ -54,6 +64,7 @@ export default async function AdminDoctorDetailPage({ params }: { params: Promis
     hospital: doctor.hospital,
     totalAppointments: appts.length,
     upcomingAppointments: upcoming,
+    rating,
   };
 
   const details: [string, string | null][] = [
@@ -80,6 +91,11 @@ export default async function AdminDoctorDetailPage({ params }: { params: Promis
             Dr. {doctor.firstName} {doctor.lastName}
           </h2>
           <p className="profile-role">{doctor.specialty ?? "General Practice"}</p>
+          {rating && (
+            <p className="profile-rating">
+              <Stars value={rating.average} /> {formatAverage(rating.average)} · {rating.count} rating{rating.count === 1 ? "" : "s"}
+            </p>
+          )}
           <span className={`status-pill ${doctor.isActive ? "status-confirmed" : "status-cancelled"}`}>
             {doctor.isActive ? "Active" : "Inactive"}
           </span>
@@ -113,6 +129,9 @@ export default async function AdminDoctorDetailPage({ params }: { params: Promis
           </>
         )}
       </section>
+
+      <h2 className="section-heading detail-section-heading">Patient ratings</h2>
+      <RatingFeedback ratings={ratings} empty="No ratings yet." />
 
       <h2 className="section-heading detail-section-heading">Appointments</h2>
       {appts.length === 0 ? (
