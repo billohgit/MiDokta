@@ -14,7 +14,12 @@ export default function useServerAction() {
   const run = (action: () => Promise<Result>, options: Options = {}) => {
     if (options.confirm && !window.confirm(options.confirm)) return;
     startTransition(async () => {
-      const result = await action();
+      // A thrown action (server error, dropped connection) would otherwise bubble up to the error
+      // page and replace the whole screen; show it next to the button instead.
+      const result = await action().catch((e: unknown): Result => {
+        console.error(e);
+        return { ok: false, error: "Something went wrong. Please try again." };
+      });
       if (result.ok) {
         setError(null);
         options.onSuccess?.(result);
