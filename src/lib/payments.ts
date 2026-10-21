@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomBytes } from "crypto";
-import { Prisma, type CheckoutSession, type Invoice } from "@prisma/client";
+import { Prisma, type CheckoutChannel, type CheckoutSession, type Invoice } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { appBaseUrl } from "@/lib/url";
 import { CURRENCY, formatInvoiceNumber, formatMoney } from "@/lib/money";
@@ -12,8 +12,8 @@ import { sms } from "@/lib/sms/templates";
 
 /**
  * Online payments run on Monime (monime.io), whose hosted checkout takes Orange Money, Afrimoney
- * and cards in Sierra Leone. Each invoice gets a private link (/pay/<key>); the patient opens it,
- * we create a checkout session for the balance and send them to Monime.
+ * and cards (Mastercard) in Sierra Leone. Each invoice gets a private link (/pay/<key>); the patient
+ * opens it, picks mobile money or card, and we send them to a Monime checkout that offers only that.
  *
  * We never trust a redirect or a webhook body to say a payment happened: settling a checkout always
  * asks Monime for the session's status first.
@@ -74,18 +74,30 @@ export async function invoicePayLink(invoiceId: string): Promise<string | null> 
   return paymentsConfigured() ? payLink(await ensurePayKey(invoiceId)) : null;
 }
 
+/**
+ * Monime's `paymentOptions` for a checkout that offers only the chosen method. Banks and wallets
+ * are always hidden: patients pay with mobile money or a card.
+ */
+const PAYMENT_OPTIONS: Record<CheckoutChannel, object> = {
+  MOBILE_MONEY: { momo: { disable: false }, card: { disable: true }, bank: { disable: true }, wallet: { disable: true } },
+  CARD: { card: { disable: false }, momo: { disable: true }, bank: { disable: true }, wallet: { disable: true } },
+};
+
+const CHANNEL_NAME: Record<CheckoutChannel, string> = { MOBILE_MONEY: "mobile money", CARD: "card" };
+
 /** Monime prices are integers in minor units (cents of a Leone). */
 const toMinor = (amount: Prisma.Decimal) => amount.times(100).toDecimalPlaces(0).toNumber();
 
 /**
- * Starts (or reuses) a checkout for the invoice's whole balance and returns the Monime page to send
- * the patient to. Monime sends them back to `returnUrl` with `?paid=1` or `?cancelled=1`.
+ * Starts (or reuses) a checkout for the invoice's whole balance, offering only `channel`, and returns
+ * the Monime page to send the patient to. Monime sends them back to `returnUrl` with `?paid=1` or
+ * `?cancelled=1`.
  */
-export async function startCheckout(invoice: Invoice, returnUrl: string): Promise<string> {
+export async function startCheckout(invoice: Invoice, returnUrl: string, channel: CheckoutChannel): Promise<string> {
   const balance = invoice.total.minus(invoice.amountPaid);
 
   const recent = await prisma.checkoutSession.findFirst({
-    where: { invoiceId: invoice.id, status: "PENDING", amount: balance, createdAt: { gte: new Date(Date.now() - REUSE_CHECKOUT_MS) } },
+    where: { invoiceId: invoice.id, status: "PENDING", channel, amount: balance, createdAt: { gte: new Date(Date.now() - REUSE_CHECKOUT_MS) } },
     orderBy: { createdAt: "desc" },
   });
   if (recent) return recent.redirectUrl;
@@ -101,13 +113,14 @@ export async function startCheckout(invoice: Invoice, returnUrl: string): Promis
       successUrl: `${returnUrl}?paid=1`,
       cancelUrl: `${returnUrl}?cancelled=1`,
       lineItems: [{ type: "custom", name: `Invoice ${number}`, price: { currency: CURRENCY, value: toMinor(balance) }, quantity: 1 }],
+      paymentOptions: PAYMENT_OPTIONS[channel],
       brandingOptions: { primaryColor: "#b71c1c" },
-      metadata: { invoiceId: invoice.id },
+      metadata: { invoiceId: invoice.id, channel },
     },
   });
 
   await prisma.checkoutSession.create({
-    data: { invoiceId: invoice.id, sessionId: session.id, redirectUrl: session.redirectUrl, amount: balance },
+    data: { invoiceId: invoice.id, sessionId: session.id, redirectUrl: session.redirectUrl, amount: balance, channel },
   });
   return session.redirectUrl;
 }
@@ -162,6 +175,7 @@ export async function settleCheckout(checkout: CheckoutSession): Promise<void> {
   if (!result) return;
 
   const { invoice, amount, balance } = result;
+  const by = checkout.channel ? ` by ${CHANNEL_NAME[checkout.channel]}` : "";
   const number = formatInvoiceNumber(invoice.number);
   await queueSms({
     userId: invoice.patientId,
@@ -174,7 +188,7 @@ export async function settleCheckout(checkout: CheckoutSession): Promise<void> {
   await notifyRoles(FRONT_DESK_ROLES, {
     type: "PAYMENT_RECEIVED",
     title: "Online payment received",
-    body: `${formatMoney(amount.toString())} for ${number} (${invoice.patient.firstName} ${invoice.patient.lastName}).${issue}`,
+    body: `${formatMoney(amount.toString())}${by} for ${number} (${invoice.patient.firstName} ${invoice.patient.lastName}).${issue}`,
     link: `${PORTAL_TOKEN}/billing/${invoice.id}`,
   });
 }

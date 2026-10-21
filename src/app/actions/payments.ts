@@ -1,6 +1,6 @@
 "use server";
 
-import { Role } from "@prisma/client";
+import { CheckoutChannel, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { authorize } from "@/lib/auth";
 import { FRONT_DESK_ROLES } from "@/lib/roles";
@@ -34,11 +34,15 @@ export async function textPaymentLink(invoiceId: string): Promise<ActionResult> 
   return { ok: true };
 }
 
+const isChannel = (value: unknown): value is CheckoutChannel => Object.values(CheckoutChannel).includes(value as CheckoutChannel);
+const NO_CHANNEL = "Choose mobile money or card.";
+
 /**
  * Public: called from the patient's payment page (/pay/<key>), where the key is the only credential.
  * Returns the Monime checkout page to send the patient to.
  */
-export async function payInvoiceOnline(key: string): Promise<ActionResult & { url?: string }> {
+export async function payInvoiceOnline(key: string, channel: CheckoutChannel): Promise<ActionResult & { url?: string }> {
+  if (!isChannel(channel)) return fail(NO_CHANNEL);
   if (!paymentsConfigured()) return fail("Online payment isn't available right now. Please pay at the clinic.");
   const invoice = await prisma.invoice.findUnique({ where: { payKey: key } });
   if (!invoice?.payKey) return fail("This payment link isn't valid.");
@@ -49,7 +53,7 @@ export async function payInvoiceOnline(key: string): Promise<ActionResult & { ur
   if (fresh.status !== "UNPAID" && fresh.status !== "PARTIAL") return fail("This invoice has nothing left to pay.");
 
   try {
-    return { ok: true, url: await startCheckout(fresh, await payLink(invoice.payKey)) };
+    return { ok: true, url: await startCheckout(fresh, await payLink(invoice.payKey), channel) };
   } catch (e) {
     console.error("Starting checkout failed", e);
     return fail("We couldn't start the payment. Please try again in a moment.");
@@ -57,9 +61,10 @@ export async function payInvoiceOnline(key: string): Promise<ActionResult & { ur
 }
 
 /** A signed-in patient pays their own invoice; Monime sends them back to the invoice in their portal. */
-export async function payMyInvoice(invoiceId: string): Promise<ActionResult & { url?: string }> {
+export async function payMyInvoice(invoiceId: string, channel: CheckoutChannel): Promise<ActionResult & { url?: string }> {
   const me = await authorize(Role.PATIENT);
   if (!me) return DENIED;
+  if (!isChannel(channel)) return fail(NO_CHANNEL);
   if (!paymentsConfigured()) return fail("Online payment isn't available right now. Please pay at the clinic.");
   const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, patientId: me.id } });
   if (!invoice) return fail("Invoice not found.");
@@ -69,7 +74,7 @@ export async function payMyInvoice(invoiceId: string): Promise<ActionResult & { 
   if (fresh.status !== "UNPAID" && fresh.status !== "PARTIAL") return fail("This invoice has nothing left to pay.");
 
   try {
-    return { ok: true, url: await startCheckout(fresh, `${await appBaseUrl()}/patient/billing/${invoice.id}`) };
+    return { ok: true, url: await startCheckout(fresh, `${await appBaseUrl()}/patient/billing/${invoice.id}`, channel) };
   } catch (e) {
     console.error("Starting checkout failed", e);
     return fail("We couldn't start the payment. Please try again in a moment.");

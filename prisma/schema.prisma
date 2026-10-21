@@ -63,6 +63,12 @@ enum PaymentMethod {
   ONLINE
 }
 
+/// How the patient chose to pay at the online checkout.
+enum CheckoutChannel {
+  MOBILE_MONEY
+  CARD
+}
+
 enum CheckoutStatus {
   PENDING
   COMPLETED
@@ -394,19 +400,21 @@ model Payment {
 
 /// An online payment attempt through Monime's hosted checkout (src/lib/payments.ts).
 model CheckoutSession {
-  id          String         @id @default(cuid())
+  id          String           @id @default(cuid())
   invoiceId   String
-  invoice     Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice     Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   /// Monime's checkout session id.
-  sessionId   String         @unique
+  sessionId   String           @unique
   redirectUrl String
-  amount      Decimal        @db.Decimal(12, 2)
-  status      CheckoutStatus @default(PENDING)
+  amount      Decimal          @db.Decimal(12, 2)
+  status      CheckoutStatus   @default(PENDING)
+  /// The only method the checkout offered; null for checkouts that offered every method.
+  channel     CheckoutChannel?
   /// The payment recorded when the checkout completed.
-  paymentId   String?        @unique
-  payment     Payment?       @relation(fields: [paymentId], references: [id], onDelete: SetNull)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  paymentId   String?          @unique
+  payment     Payment?         @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@index([invoiceId])
   @@index([status, createdAt])

@@ -96,12 +96,7 @@ export default async function PatientInvoicePage({ params, searchParams }: Props
             )}
             {cancelled && <p className="pay-status">The payment was cancelled. You can try again below.</p>}
             {paymentsConfigured() ? (
-              <>
-                <PayButton invoiceId={invoice.id} label={`Pay ${formatMoney(balance.toString())}`} />
-                <p className="pay-methods">
-                  <i className="fa-solid fa-mobile-screen" /> Orange Money · Afrimoney · <i className="fa-regular fa-credit-card" /> Card
-                </p>
-              </>
+              <PayButton invoiceId={invoice.id} amount={formatMoney(balance.toString())} />
             ) : (
               <p className="pay-status">Online payment isn&apos;t available right now. Please pay at the clinic.</p>
             )}

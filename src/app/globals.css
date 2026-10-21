@@ -1359,8 +1359,26 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
 .pay-total { border-top: 1px solid var(--border); padding-top: 8px; font-weight: 600; }
 .pay-balance { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; font-size: 16px; }
 .pay-balance strong { font-size: 22px; }
-.pay-btn { width: 100%; justify-content: center; padding: 12px; font-size: 16px; }
-.pay-methods { margin-top: 10px; text-align: center; color: var(--muted); font-size: 13px; }
+.pay-choose { margin: 0 0 10px; font-weight: 600; }
+.pay-options { display: flex; flex-direction: column; gap: 10px; }
+.pay-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.pay-option:hover:not(:disabled) { border-color: var(--primary); background: #fff5f6; }
+.pay-option:disabled { opacity: 0.7; cursor: default; }
+.pay-option-icon { width: 24px; font-size: 22px; text-align: center; color: var(--primary); }
+.pay-option-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.pay-option-text small { color: var(--muted); font-size: 13px; }
+.pay-option-text .fa-cc-mastercard { color: #eb001b; }
+.pay-option-go { color: var(--muted); }
 .pay-status { margin: 0 0 16px; color: var(--muted); }
 .pay-status-ok { color: var(--brand-teal); font-weight: 600; }
 .invoice-paylink { margin-bottom: 16px; }
