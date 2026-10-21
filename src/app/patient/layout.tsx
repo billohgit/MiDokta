@@ -1,5 +1,6 @@
 import { Role } from "@prisma/client";
 import PortalShell from "@/components/PortalShell";
+import type { NavItem } from "@/components/Sidebar";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { topbarUser } from "@/lib/people";
@@ -9,14 +10,14 @@ import MedicationReminders from "@/components/omega/MedicationReminders";
 
 export const dynamic = "force-dynamic";
 
-const NAV = [
-  { href: "/patient/dashboard", label: "Home", icon: "fa-house-medical" },
-  { href: "/patient/appointments", label: "Appointments", icon: "fa-calendar-plus" },
-  { href: "/patient/calls", label: "Video Calls", icon: "fa-video" },
-  { href: "/patient/billing", label: "Bills & Payments", icon: "fa-file-invoice-dollar" },
-  { href: "/patient/chat", label: "Messages", icon: "fa-comments" },
-  { href: "/patient/records", label: "My Records", icon: "fa-notes-medical" },
-  { href: "/patient/settings", label: "My Profile", icon: "fa-gear" },
+const NAV: NavItem[] = [
+  { href: "/patient/dashboard", label: "home", icon: "fa-house-medical" },
+  { href: "/patient/appointments", label: "appointments", icon: "fa-calendar-plus" },
+  { href: "/patient/calls", label: "videoCalls", icon: "fa-video" },
+  { href: "/patient/billing", label: "billsPayments", icon: "fa-file-invoice-dollar" },
+  { href: "/patient/chat", label: "messages", icon: "fa-comments" },
+  { href: "/patient/records", label: "myRecords", icon: "fa-notes-medical" },
+  { href: "/patient/settings", label: "myProfile", icon: "fa-gear" },
 ];
 
 export default async function PatientLayout({ children }: { children: React.ReactNode }) {

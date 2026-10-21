@@ -794,6 +794,32 @@ a.person-cell:hover span { color: var(--primary); }
 .notif-page-list { overflow: hidden; }
 .notif-page-list .notif-item:last-child { border-bottom: none; }
 
+/* ---------- Language switcher ---------- */
+.lang { position: relative; }
+.lang-btn { width: auto; padding: 0 10px; gap: 6px; display: flex; align-items: center; border-radius: 20px; }
+.lang-code { font-size: 13px; font-weight: 600; }
+.lang-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 160px;
+  z-index: 40;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+}
+.lang-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 10px 16px;
+  text-align: left;
+  background: #fff;
+}
+.lang-option:hover { background: #f8f9fa; }
+.lang-option.on { font-weight: 600; color: var(--primary); }
+.login-lang { position: fixed; top: 16px; right: 16px; z-index: 10; }
+
 /* ---------- Hospitals ---------- */
 .hospital-card { padding: 20px; display: flex; flex-direction: column; }
 .hospital-card.inactive { opacity: 0.7; }

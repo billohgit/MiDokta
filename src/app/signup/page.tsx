@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { PORTAL_HOME, getSessionUser } from "@/lib/auth";
 import Logo from "@/components/Logo";
 import { DEFAULT_COUNTRY } from "@/lib/sms/phone";
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import SignupForm from "./SignupForm";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,9 @@ export default async function SignupPage() {
 
   return (
     <main className="login-page">
+      <div className="login-lang">
+        <LanguageSwitcher />
+      </div>
       <div className="card login-card">
         <div className="login-brand">
           <Logo stacked tagline />

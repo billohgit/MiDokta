@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useDictionary } from "@/components/i18n/LocaleProvider";
 import LoginForm from "./LoginForm";
 import PatientLoginForm from "./PatientLoginForm";
 
@@ -11,6 +12,7 @@ const REMEMBER_KEY = "mi-dokta-login-as";
 /** Patients sign in with a texted code or email and password; doctors and staff with their password. */
 export default function LoginTabs({ defaultCountry, initial }: { defaultCountry: string; initial: Who }) {
   const [who, setWho] = useState<Who>(initial);
+  const d = useDictionary();
 
   // Staff sign in on the same devices every day: reopen the tab last used on this one.
   useEffect(() => {
@@ -33,10 +35,10 @@ export default function LoginTabs({ defaultCountry, initial }: { defaultCountry:
 
   return (
     <>
-      <div className="segmented login-who" role="tablist" aria-label="I am a">
+      <div className="segmented login-who" role="tablist" aria-label={d.login.iAmA}>
         {(["patient", "staff"] as const).map((w) => (
           <button key={w} type="button" role="tab" aria-selected={who === w} className={who === w ? "on" : undefined} onClick={() => choose(w)}>
-            <i className={w === "patient" ? "fa-solid fa-user" : "fa-solid fa-user-doctor"} /> {w === "patient" ? "Patient" : "Doctor / Staff"}
+            <i className={w === "patient" ? "fa-solid fa-user" : "fa-solid fa-user-doctor"} /> {w === "patient" ? d.login.patient : d.login.doctorStaff}
           </button>
         ))}
       </div>

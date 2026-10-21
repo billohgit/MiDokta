@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Sidebar, { type NavItem } from "./Sidebar";
 import Topbar, { type TopbarUser } from "./Topbar";
 import IncomingCallWatcher from "./calls/IncomingCallWatcher";
+import { useDictionary } from "./i18n/LocaleProvider";
 
 /** `basePath` is the portal root, e.g. "/admin". `badges` adds counts to other nav items, keyed by href. */
 type Props = {
@@ -25,6 +26,7 @@ export default function PortalShell({ nav, basePath, user, initialChatUnread, ba
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const [chatUnread, setChatUnread] = useState(initialChatUnread);
+  const d = useDictionary();
 
   // Layouts don't re-render on client navigation, so keep the chat badge fresh by polling.
   useEffect(() => {
@@ -42,9 +44,12 @@ export default function PortalShell({ nav, basePath, user, initialChatUnread, ba
   }, [pathname]);
 
   const section = pathname.slice(basePath.length).split("/")[1] ?? "";
-  const title =
-    nav.find((item) => pathname.startsWith(item.href))?.label ??
-    (section ? section[0].toUpperCase() + section.slice(1) : "Dashboard");
+  const current = nav.find((item) => pathname.startsWith(item.href));
+  const title = current
+    ? d.nav[current.label]
+    : section
+      ? section[0].toUpperCase() + section.slice(1)
+      : d.nav.dashboard;
 
   const toggle = () => {
     if (window.matchMedia("(max-width: 992px)").matches) setMobileOpen((o) => !o);

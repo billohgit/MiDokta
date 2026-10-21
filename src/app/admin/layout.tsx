@@ -1,5 +1,6 @@
 import { Role } from "@prisma/client";
 import PortalShell from "@/components/PortalShell";
+import type { NavItem } from "@/components/Sidebar";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { topbarUser } from "@/lib/people";
@@ -7,19 +8,19 @@ import { unreadMessageCount } from "@/lib/chat";
 
 export const dynamic = "force-dynamic";
 
-const NAV = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: "fa-table-cells-large" },
-  { href: "/admin/appointments", label: "Appointments", icon: "fa-calendar-plus" },
-  { href: "/admin/patients", label: "Patients", icon: "fa-bed-pulse" },
-  { href: "/admin/doctors", label: "Doctors", icon: "fa-user-doctor" },
-  { href: "/admin/staff", label: "Staff", icon: "fa-users" },
-  { href: "/admin/verifications", label: "Verification", icon: "fa-id-card" },
-  { href: "/admin/hospitals", label: "Hospitals", icon: "fa-hospital" },
-  { href: "/admin/inventory", label: "Pharmacy", icon: "fa-boxes-stacked" },
-  { href: "/admin/billing", label: "Billing", icon: "fa-file-invoice-dollar" },
-  { href: "/admin/chat", label: "Chat", icon: "fa-comments" },
-  { href: "/admin/sms", label: "SMS", icon: "fa-comment-sms" },
-  { href: "/admin/settings", label: "Settings", icon: "fa-gear" },
+const NAV: NavItem[] = [
+  { href: "/admin/dashboard", label: "dashboard", icon: "fa-table-cells-large" },
+  { href: "/admin/appointments", label: "appointments", icon: "fa-calendar-plus" },
+  { href: "/admin/patients", label: "patients", icon: "fa-bed-pulse" },
+  { href: "/admin/doctors", label: "doctors", icon: "fa-user-doctor" },
+  { href: "/admin/staff", label: "staff", icon: "fa-users" },
+  { href: "/admin/verifications", label: "verification", icon: "fa-id-card" },
+  { href: "/admin/hospitals", label: "hospitals", icon: "fa-hospital" },
+  { href: "/admin/inventory", label: "pharmacy", icon: "fa-boxes-stacked" },
+  { href: "/admin/billing", label: "billing", icon: "fa-file-invoice-dollar" },
+  { href: "/admin/chat", label: "chat", icon: "fa-comments" },
+  { href: "/admin/sms", label: "sms", icon: "fa-comment-sms" },
+  { href: "/admin/settings", label: "settings", icon: "fa-gear" },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
