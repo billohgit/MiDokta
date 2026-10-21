@@ -11,9 +11,10 @@ import { queueSms } from "@/lib/sms";
 import { sms } from "@/lib/sms/templates";
 
 /**
- * Online payments run on Monime (monime.io), whose hosted checkout takes Orange Money, Afrimoney
- * and cards (Mastercard) in Sierra Leone. Each invoice gets a private link (/pay/<key>); the patient
- * opens it, picks mobile money or card, and we send them to a Monime checkout that offers only that.
+ * Online payments run on Monime (monime.io), whose hosted checkout takes mobile money (Orange Money,
+ * Afrimoney), cards (Visa, Mastercard) and Sierra Leone banks. Each invoice gets a private link
+ * (/pay/<key>); the patient opens it, picks one of those, and we send them to a Monime checkout that
+ * offers only that. Monime's digital wallets are always hidden.
  *
  * We never trust a redirect or a webhook body to say a payment happened: settling a checkout always
  * asks Monime for the session's status first.
@@ -74,16 +75,24 @@ export async function invoicePayLink(invoiceId: string): Promise<string | null> 
   return paymentsConfigured() ? payLink(await ensurePayKey(invoiceId)) : null;
 }
 
-/**
- * Monime's `paymentOptions` for a checkout that offers only the chosen method. Banks and wallets
- * are always hidden: patients pay with mobile money or a card.
- */
-const PAYMENT_OPTIONS: Record<CheckoutChannel, object> = {
-  MOBILE_MONEY: { momo: { disable: false }, card: { disable: true }, bank: { disable: true }, wallet: { disable: true } },
-  CARD: { card: { disable: false }, momo: { disable: true }, bank: { disable: true }, wallet: { disable: true } },
+/** Monime's name for each method in a checkout's `paymentOptions`. */
+const MONIME_OPTION: Record<CheckoutChannel, "momo" | "card" | "bank"> = {
+  MOBILE_MONEY: "momo",
+  CARD: "card",
+  BANK: "bank",
 };
 
-const CHANNEL_NAME: Record<CheckoutChannel, string> = { MOBILE_MONEY: "mobile money", CARD: "card" };
+/** Monime's `paymentOptions` for a checkout that offers only the chosen method; wallets are never offered. */
+const paymentOptions = (channel: CheckoutChannel) => ({
+  ...Object.fromEntries(Object.entries(MONIME_OPTION).map(([c, option]) => [option, { disable: c !== channel }])),
+  wallet: { disable: true },
+});
+
+const CHANNEL_NAME: Record<CheckoutChannel, string> = {
+  MOBILE_MONEY: "mobile money",
+  CARD: "card",
+  BANK: "bank transfer",
+};
 
 /** Monime prices are integers in minor units (cents of a Leone). */
 const toMinor = (amount: Prisma.Decimal) => amount.times(100).toDecimalPlaces(0).toNumber();
@@ -113,7 +122,7 @@ export async function startCheckout(invoice: Invoice, returnUrl: string, channel
       successUrl: `${returnUrl}?paid=1`,
       cancelUrl: `${returnUrl}?cancelled=1`,
       lineItems: [{ type: "custom", name: `Invoice ${number}`, price: { currency: CURRENCY, value: toMinor(balance) }, quantity: 1 }],
-      paymentOptions: PAYMENT_OPTIONS[channel],
+      paymentOptions: paymentOptions(channel),
       brandingOptions: { primaryColor: "#b71c1c" },
       metadata: { invoiceId: invoice.id, channel },
     },

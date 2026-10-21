@@ -67,6 +67,7 @@ enum PaymentMethod {
 enum CheckoutChannel {
   MOBILE_MONEY
   CARD
+  BANK
 }
 
 enum CheckoutStatus {

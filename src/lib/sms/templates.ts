@@ -69,10 +69,10 @@ const templates = {
     `${SMS_BRAND}: Hi ${p.firstName}, your follow-up with ${drName(doctor)} is due on ${smsDate(date)}. Please contact us to book a visit.`,
 
   invoiceCreated: (p: Person, number: number, total: string, dueDate?: Date | null, payLink?: string | null) =>
-    `${SMS_BRAND}: Hi ${p.firstName}, invoice ${formatInvoiceNumber(number)} for ${formatMoney(total)} has been issued${dueDate ? `, due ${smsDate(dueDate)}` : ""}.${payLink ? ` Pay with Orange Money, Afrimoney or card: ${payLink}` : ""}`,
+    `${SMS_BRAND}: Hi ${p.firstName}, invoice ${formatInvoiceNumber(number)} for ${formatMoney(total)} has been issued${dueDate ? `, due ${smsDate(dueDate)}` : ""}.${payLink ? ` Pay with mobile money, card or bank: ${payLink}` : ""}`,
 
   paymentLink: (p: Person, number: number, balance: string, payLink: string) =>
-    `${SMS_BRAND}: Hi ${p.firstName}, ${formatMoney(balance)} is due on invoice ${formatInvoiceNumber(number)}. Pay with Orange Money, Afrimoney or card: ${payLink}`,
+    `${SMS_BRAND}: Hi ${p.firstName}, ${formatMoney(balance)} is due on invoice ${formatInvoiceNumber(number)}. Pay with mobile money, card or bank: ${payLink}`,
 
   paymentReceived: (p: Person, number: number, amount: string, balance: number) =>
     `${SMS_BRAND}: Thank you ${p.firstName}. We received ${formatMoney(amount)} for invoice ${formatInvoiceNumber(number)}. ${balance > 0 ? `Balance: ${formatMoney(balance)}.` : "Paid in full."}`,

@@ -75,7 +75,7 @@ export default async function PatientDashboardPage() {
         <Link href="/patient/billing" className="card pay-reminder">
           <i className="fa-solid fa-mobile-screen" />
           <span>
-            <strong>You have {formatMoney(balance)} to pay.</strong> Pay now with Orange Money, Afrimoney or card.
+            <strong>You have {formatMoney(balance)} to pay.</strong> Pay now with mobile money, card or bank transfer.
           </span>
           <i className="fa-solid fa-chevron-right" />
         </Link>

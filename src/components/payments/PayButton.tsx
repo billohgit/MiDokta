@@ -17,15 +17,21 @@ const CHANNELS: { channel: CheckoutChannel; title: string; detail: React.ReactNo
     title: "Card",
     detail: (
       <>
-        <i className="fa-brands fa-cc-mastercard" /> Mastercard
+        <i className="fa-brands fa-cc-visa" /> Visa · <i className="fa-brands fa-cc-mastercard" /> Mastercard
       </>
     ),
     icon: "fa-regular fa-credit-card",
   },
+  {
+    channel: "BANK",
+    title: "Bank",
+    detail: "SLCB, GTBank and other local banks",
+    icon: "fa-solid fa-building-columns",
+  },
 ];
 
 /**
- * The patient picks mobile money or card, and we send them to a Monime checkout for that method.
+ * The patient picks mobile money, card or bank, and we send them to a Monime checkout for that method.
  * From the public payment link pass `payKey`; from the patient portal pass `invoiceId`.
  */
 export default function PayButton({ payKey, invoiceId, amount }: { payKey?: string; invoiceId?: string; amount: string }) {

@@ -35,7 +35,7 @@ export async function textPaymentLink(invoiceId: string): Promise<ActionResult> 
 }
 
 const isChannel = (value: unknown): value is CheckoutChannel => Object.values(CheckoutChannel).includes(value as CheckoutChannel);
-const NO_CHANNEL = "Choose mobile money or card.";
+const NO_CHANNEL = "Choose how you want to pay.";
 
 /**
  * Public: called from the patient's payment page (/pay/<key>), where the key is the only credential.
