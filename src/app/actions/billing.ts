@@ -89,11 +89,13 @@ export async function recordPayment(formData: FormData): Promise<ActionResult> {
 
   const invoiceId = text(formData, "invoiceId");
   const amount = decimalValue(formData, "amount", 0.01, MAX_AMOUNT);
-  // Online payments are only ever recorded by the checkout, once Monime confirms them.
+  // Online payments are only ever recorded by the checkout, once the provider confirms them.
   const method = enumValue(formData, "method", Object.values(PaymentMethod).filter((m) => m !== "ONLINE"));
   if (!invoiceId) return fail("Invoice not found.");
   if (!amount || !MONEY_PATTERN.test(amount)) return fail("Enter a valid amount (up to 2 decimal places).");
   if (!method) return fail("Choose a payment method.");
+  // The doctor's share and any refund are sent out of the online payment, so the fee must come in that way.
+  if (await prisma.consultation.count({ where: { invoiceId } })) return fail("Consultation fees are paid online by the patient when they book.");
 
   const result = await prisma.$transaction(async (tx) => {
     // Lock the invoice row so concurrent payments can't overpay it.

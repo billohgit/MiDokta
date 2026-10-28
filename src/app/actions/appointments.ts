@@ -9,6 +9,7 @@ import { FRONT_DESK_ROLES } from "@/lib/roles";
 import { queueSms } from "@/lib/sms";
 import { sms } from "@/lib/sms/templates";
 import { formatDate, formatTime } from "@/components/appointments/shared";
+import { onAppointmentStatusChanged } from "@/lib/consultations";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -53,6 +54,8 @@ export async function setAppointmentStatus(id: string, status: AppointmentStatus
   }
 
   await prisma.appointment.update({ where: { id }, data: { status, doctorId } });
+  // A paid consultation pays the doctor when completed, and refunds the patient when declined or cancelled.
+  if (status !== appt.status) await onAppointmentStatusChanged(id, status);
 
   if (status !== appt.status && appt.startsAt > new Date()) {
     const byFrontDesk = user.role !== Role.DOCTOR;

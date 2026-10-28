@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { formatInvoiceNumber, formatMoney } from "@/lib/money";
 import { paymentsConfigured, syncInvoiceCheckouts } from "@/lib/payments";
+import { WALLET_LABEL, channelsForInvoice, consultationPayProblem } from "@/lib/consultations";
 import PayButton from "@/components/payments/PayButton";
 import { INVOICE_STATUS_CLASS, INVOICE_STATUS_LABEL, PAYMENT_METHOD_LABEL } from "@/components/billing/shared";
 import { formatDate } from "@/components/appointments/shared";
@@ -20,7 +21,7 @@ export default async function PatientInvoicePage({ params, searchParams }: Props
 
   const owned = await prisma.invoice.findFirst({ where: { id, patientId: patient.id }, select: { id: true } });
   if (!owned) notFound();
-  // Coming back from Monime (or reloading): record any payment that has gone through.
+  // Coming back from the checkout (or reloading): record any payment that has gone through.
   await syncInvoiceCheckouts(id);
 
   const invoice = await prisma.invoice.findUniqueOrThrow({
@@ -30,8 +31,14 @@ export default async function PatientInvoicePage({ params, searchParams }: Props
       items: true,
       payments: { orderBy: { paidAt: "asc" } },
       checkouts: { where: { status: "PENDING" }, select: { id: true } },
+      consultation: {
+        include: { doctor: { select: { firstName: true, lastName: true } }, payouts: { where: { kind: "REFUND" } } },
+      },
     },
   });
+  const [channels, payProblem] = await Promise.all([channelsForInvoice(id), consultationPayProblem(id)]);
+  const booking = invoice.consultation;
+  const refund = booking?.payouts[0];
 
   const balance = invoice.total.minus(invoice.amountPaid);
   const open = invoice.status === "UNPAID" || invoice.status === "PARTIAL";
@@ -79,6 +86,20 @@ export default async function PatientInvoicePage({ params, searchParams }: Props
           ))}
         </ul>
 
+        {booking && (
+          <p className="pay-status">
+            {refund
+              ? refund.status === "COMPLETED"
+                ? `Refunded in full to your ${WALLET_LABEL[refund.wallet!]} ${refund.account}.`
+                : refund.status === "FAILED"
+                  ? "Your refund couldn't be sent automatically. The clinic has been told and will send it to you."
+                  : `Your refund is on its way to your ${WALLET_LABEL[booking.refundWallet]} ${booking.refundAccount}.`
+              : booking.paidAt
+                ? `Your request has been sent to Dr. ${booking.doctor.firstName} ${booking.doctor.lastName}. If they decline or the visit is cancelled, the fee is refunded in full to your ${WALLET_LABEL[booking.refundWallet]} ${booking.refundAccount}.`
+                : `Your request goes to Dr. ${booking.doctor.firstName} ${booking.doctor.lastName} as soon as this is paid. If they decline or the visit is cancelled, the fee is refunded in full to your ${WALLET_LABEL[booking.refundWallet]} ${booking.refundAccount}.`}
+          </p>
+        )}
+
         {invoice.status === "VOID" ? (
           <p className="pay-status">This invoice has been cancelled. There is nothing to pay.</p>
         ) : !open ? (
@@ -95,8 +116,10 @@ export default async function PatientInvoicePage({ params, searchParams }: Props
               <p className="pay-status">We&apos;re confirming your payment. This can take a minute: refresh this page shortly.</p>
             )}
             {cancelled && <p className="pay-status">The payment was cancelled. You can try again below.</p>}
-            {paymentsConfigured() ? (
-              <PayButton invoiceId={invoice.id} amount={formatMoney(balance.toString())} />
+            {payProblem ? (
+              <p className="pay-status">{payProblem}</p>
+            ) : paymentsConfigured() && channels.length > 0 ? (
+              <PayButton invoiceId={invoice.id} amount={formatMoney(balance.toString())} channels={channels} />
             ) : (
               <p className="pay-status">Online payment isn&apos;t available right now. Please pay at the clinic.</p>
             )}

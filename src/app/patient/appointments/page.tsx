@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { videoConfigured } from "@/lib/calls";
 import { myUpcomingAppointments } from "@/lib/patient-portal";
 import { ratableVisits } from "@/lib/ratings";
+import { formatMoney } from "@/lib/money";
 import AppointmentTable from "@/components/appointments/AppointmentTable";
 import UpcomingList from "@/components/patient-portal/UpcomingList";
 import RequestAppointmentButton from "@/components/patient-portal/RequestAppointmentButton";
@@ -35,7 +36,13 @@ export default async function PatientAppointmentsPage() {
           <p className="section-sub">Request a visit, and see what&apos;s coming up.</p>
         </div>
         <RequestAppointmentButton
-          doctors={doctors.map((d) => ({ id: d.id, name: `Dr. ${d.firstName} ${d.lastName}`, specialty: d.specialty }))}
+          doctors={doctors.map((d) => ({
+            id: d.id,
+            name: `Dr. ${d.firstName} ${d.lastName}`,
+            specialty: d.specialty,
+            fee: d.consultationFee?.isPositive() ? formatMoney(d.consultationFee.toString()) : null,
+          }))}
+          phone={patient.phone}
         />
       </div>
 

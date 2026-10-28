@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Role, VisitType } from "@prisma/client";
+import { MobileWallet, Role, VisitType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { authorize } from "@/lib/auth";
 import { type ActionResult, DENIED, enumValue, fail, text } from "@/lib/form";
@@ -10,6 +10,7 @@ import { FRONT_DESK_ROLES } from "@/lib/roles";
 import { queueSms } from "@/lib/sms";
 import { sms } from "@/lib/sms/templates";
 import { formatDate, formatTime } from "@/components/appointments/shared";
+import { bookConsultation, channelsRefundableTo, feeOf, onAppointmentStatusChanged, walletAccount } from "@/lib/consultations";
 
 /** Requests a patient can have waiting at once, so the inbox can't be flooded. */
 const MAX_OPEN_REQUESTS = 5;
@@ -17,8 +18,12 @@ const MAX_REASON_LENGTH = 120;
 
 const when = (d: Date) => `${formatDate(d.toISOString())} at ${formatTime(d.toISOString())}`;
 
-/** A patient asks for an appointment, with a doctor of their choice or whoever is free. */
-export async function requestAppointment(formData: FormData): Promise<ActionResult> {
+/**
+ * A patient asks for an appointment with a doctor. If the doctor charges a fee, nothing reaches them
+ * yet: a fee invoice is created and its id returned as `payInvoiceId`, and the request is sent once
+ * that's paid (see src/lib/consultations.ts).
+ */
+export async function requestAppointment(formData: FormData): Promise<ActionResult & { payInvoiceId?: string }> {
   const me = await authorize(Role.PATIENT);
   if (!me) return DENIED;
 
@@ -28,24 +33,40 @@ export async function requestAppointment(formData: FormData): Promise<ActionResu
   const visitType = enumValue(formData, "visitType", Object.values(VisitType));
   const reason = text(formData, "title")?.slice(0, MAX_REASON_LENGTH) ?? "Consultation";
 
+  if (!doctorId) return fail("Choose a doctor.");
   if (!date || !time) return fail("Choose a date and time.");
   if (!visitType) return fail("Choose in person or video call.");
   const startsAt = new Date(`${date}T${time}`);
   if (isNaN(startsAt.getTime())) return fail("Invalid date or time.");
   if (startsAt.getTime() < Date.now()) return fail("Choose a time in the future.");
 
-  const doctor = doctorId ? await prisma.user.findFirst({ where: { id: doctorId, role: Role.DOCTOR, isActive: true } }) : null;
-  if (doctorId && !doctor) return fail("That doctor isn't available. Choose another, or any doctor.");
+  const doctor = await prisma.user.findFirst({ where: { id: doctorId, role: Role.DOCTOR, isActive: true } });
+  if (!doctor) return fail("That doctor isn't available. Choose another.");
 
-  const open = await prisma.appointment.count({ where: { patientId: me.id, status: "PENDING" } });
-  if (open >= MAX_OPEN_REQUESTS) return fail("You already have several requests waiting. The clinic will get back to you soon.");
+  const [open, unpaid] = await Promise.all([
+    prisma.appointment.count({ where: { patientId: me.id, status: "PENDING" } }),
+    prisma.consultation.count({ where: { patientId: me.id, paidAt: null, startsAt: { gt: new Date() } } }),
+  ]);
+  if (open + unpaid >= MAX_OPEN_REQUESTS) return fail("You already have several requests waiting. The clinic will get back to you soon.");
+
+  const fee = feeOf(doctor);
+  if (fee) {
+    const refundWallet = enumValue(formData, "refundWallet", Object.values(MobileWallet));
+    if (!refundWallet) return fail("Choose where a refund should go.");
+    const refundAccount = walletAccount(refundWallet, text(formData, "refundAccount"));
+    if (!refundAccount) return fail(refundWallet === "TENKIPAY" ? "Enter your TenkiPay wallet number." : "Enter a valid Sierra Leone mobile number for refunds.");
+    if (channelsRefundableTo(refundWallet).length === 0) return fail("Online payment isn't available for that account right now. Choose another.");
+    const payInvoiceId = await bookConsultation({ patient: me, doctor, fee, title: reason, startsAt, visitType, refundWallet, refundAccount });
+    revalidatePath("/", "layout");
+    return { ok: true, payInvoiceId };
+  }
 
   const appt = await prisma.appointment.create({
     data: {
       title: reason,
       patientId: me.id,
-      doctorId: doctor?.id ?? null,
-      hospitalId: doctor?.hospitalId ?? me.hospitalId,
+      doctorId: doctor.id,
+      hospitalId: doctor.hospitalId ?? me.hospitalId,
       startsAt,
       visitType,
       status: "PENDING",
@@ -53,11 +74,7 @@ export async function requestAppointment(formData: FormData): Promise<ActionResu
   });
 
   const body = `${me.firstName} ${me.lastName} · ${reason} · ${when(startsAt)}${visitType === "VIDEO_CALL" ? " (video call)" : ""}`;
-  if (doctor) {
-    await notifyUsers([doctor.id], { type: "APPOINTMENT_REQUEST", title: "Appointment request from a patient", body, link: `/doctor/appointments/${appt.id}` });
-  } else {
-    await notifyRoles([Role.DOCTOR], { type: "APPOINTMENT_REQUEST", title: "New appointment request", body, link: "/doctor/appointments" });
-  }
+  await notifyUsers([doctor.id], { type: "APPOINTMENT_REQUEST", title: "Appointment request from a patient", body, link: `/doctor/appointments/${appt.id}` });
   await notifyRoles(FRONT_DESK_ROLES, { type: "APPOINTMENT_REQUEST", title: "New appointment request", body, link: `${PORTAL_TOKEN}/appointments` });
 
   revalidatePath("/", "layout");
@@ -114,6 +131,8 @@ export async function cancelMyAppointment(id: string): Promise<ActionResult> {
   if (appt.startsAt.getTime() < Date.now()) return fail("This appointment has already started. Please contact the clinic.");
 
   await prisma.appointment.update({ where: { id }, data: { status: "CANCELLED" } });
+  // A paid consultation is refunded in full.
+  await onAppointmentStatusChanged(id, "CANCELLED");
 
   const body = `${me.firstName} ${me.lastName} cancelled their appointment on ${when(appt.startsAt)}.`;
   if (appt.doctorId) {

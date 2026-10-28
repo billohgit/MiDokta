@@ -63,11 +63,35 @@ enum PaymentMethod {
   ONLINE
 }
 
-/// How the patient chose to pay at the online checkout.
+/// How the patient chose to pay at the online checkout. TENKIPAY checkouts run on TenkiPay; the rest on Monime.
 enum CheckoutChannel {
   MOBILE_MONEY
   CARD
   BANK
+  TENKIPAY
+}
+
+/// A mobile money or wallet account money can be sent to.
+enum MobileWallet {
+  ORANGE_MONEY
+  AFRIMONEY
+  QMONEY
+  TENKIPAY
+}
+
+enum PayoutKind {
+  /// The doctor's share of a consultation fee, sent once the visit is completed.
+  DOCTOR_SHARE
+  /// The whole fee back to the patient, when the visit is declined or cancelled.
+  REFUND
+}
+
+enum PayoutStatus {
+  /// Not yet accepted by the provider (or the attempt to send it didn't get an answer).
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
 }
 
 enum CheckoutStatus {
@@ -161,6 +185,11 @@ model User {
   licenseNumber         String?
   experienceYears       Int?
   bio                   String?
+  /// What a patient pays to book this doctor; null or 0 means booking is free.
+  consultationFee       Decimal?            @db.Decimal(12, 2)
+  /// Where the doctor's share of consultation fees is sent.
+  payoutWallet          MobileWallet?
+  payoutAccount         String?
   // Patient details
   bloodGroup            String?
   allergies             String?
@@ -200,6 +229,9 @@ model User {
   callsReceived       Call[]                    @relation("CallsReceived")
   ratingsReceived     DoctorRating[]            @relation("RatingsReceived")
   ratingsGiven        DoctorRating[]            @relation("RatingsGiven")
+  consultationsBooked Consultation[]            @relation("PatientConsultations")
+  consultationsGiven  Consultation[]            @relation("DoctorConsultations")
+  payoutsReceived     Payout[]
 
   @@index([role])
 }
@@ -225,6 +257,8 @@ model Appointment {
   invoices Invoice[]
   calls    Call[]
   rating   DoctorRating?
+  /// The paid booking this appointment came from, if the doctor charges a fee.
+  consultation Consultation?
 
   @@index([startsAt])
   @@index([status])
@@ -370,6 +404,8 @@ model Invoice {
   items         InvoiceItem[]
   payments      Payment[]
   checkouts     CheckoutSession[]
+  /// Set when this invoice is a consultation fee paid at booking.
+  consultation  Consultation?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
@@ -404,7 +440,7 @@ model CheckoutSession {
   id          String           @id @default(cuid())
   invoiceId   String
   invoice     Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  /// Monime's checkout session id.
+  /// The provider's checkout session id (Monime's, or TenkiPay's for TENKIPAY checkouts).
   sessionId   String           @unique
   redirectUrl String
   amount      Decimal          @db.Decimal(12, 2)
@@ -419,6 +455,68 @@ model CheckoutSession {
 
   @@index([invoiceId])
   @@index([status, createdAt])
+}
+
+/**
+ * A patient's booking with a doctor who charges a fee. The fee is paid online before the doctor
+ * hears about it: the appointment is only created once the invoice is paid. Of the fee, the
+ * platform keeps platformFee and the doctor is paid doctorShare when the visit is completed; if it's
+ * declined or cancelled first, the whole fee is refunded to the patient's refund account.
+ */
+model Consultation {
+  id            String        @id @default(cuid())
+  patientId     String
+  patient       User          @relation("PatientConsultations", fields: [patientId], references: [id])
+  doctorId      String
+  doctor        User          @relation("DoctorConsultations", fields: [doctorId], references: [id])
+  invoiceId     String        @unique
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  appointmentId String?       @unique
+  appointment   Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  // The visit asked for; copied onto the appointment once paid.
+  title         String
+  startsAt      DateTime
+  visitType     VisitType
+  hospitalId    String?
+  fee           Decimal       @db.Decimal(12, 2)
+  platformFee   Decimal       @db.Decimal(12, 2)
+  doctorShare   Decimal       @db.Decimal(12, 2)
+  refundWallet  MobileWallet
+  refundAccount String
+  /// How the fee was paid; payouts and refunds come from the same provider.
+  paidVia       CheckoutChannel?
+  paidAt        DateTime?
+  payouts       Payout[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([doctorId])
+}
+
+/** Money sent out of the platform's Monime or TenkiPay account for a consultation. */
+model Payout {
+  id             String       @id @default(cuid())
+  consultationId String
+  consultation   Consultation @relation(fields: [consultationId], references: [id])
+  kind           PayoutKind
+  recipientId    String
+  recipient      User         @relation(fields: [recipientId], references: [id])
+  amount         Decimal      @db.Decimal(12, 2)
+  /// Sent through TenkiPay (for fees paid with TenkiPay) rather than Monime.
+  viaTenkipay    Boolean
+  /// Where it goes; null while a doctor's payment waits for them to add a payout number.
+  wallet         MobileWallet?
+  account        String?
+  status         PayoutStatus @default(PENDING)
+  /// The provider's payout (Monime) or transfer (TenkiPay) id.
+  providerId     String?      @unique
+  failureReason  String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  /// At most one doctor payment and one refund per consultation.
+  @@unique([consultationId, kind])
+  @@index([status])
 }
 
 model Notification {

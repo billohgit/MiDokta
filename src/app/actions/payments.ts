@@ -9,8 +9,10 @@ import { queueSms } from "@/lib/sms";
 import { sms } from "@/lib/sms/templates";
 import { appBaseUrl } from "@/lib/url";
 import { ensurePayKey, payLink, paymentsConfigured, startCheckout, syncInvoiceCheckouts } from "@/lib/payments";
+import { channelsForInvoice, consultationPayProblem } from "@/lib/consultations";
 
-const NOT_SET_UP = "Online payments aren't set up yet. Add MONIME_ACCESS_TOKEN and MONIME_SPACE_ID to the server settings.";
+const NOT_SET_UP =
+  "Online payments aren't set up yet. Add MONIME_ACCESS_TOKEN and MONIME_SPACE_ID, or TENKIPAY_PUBLIC_KEY and TENKIPAY_SECRET_KEY, to the server settings.";
 
 /** Texts the patient a link to pay the invoice's balance online. */
 export async function textPaymentLink(invoiceId: string): Promise<ActionResult> {
@@ -36,6 +38,7 @@ export async function textPaymentLink(invoiceId: string): Promise<ActionResult> 
 
 const isChannel = (value: unknown): value is CheckoutChannel => Object.values(CheckoutChannel).includes(value as CheckoutChannel);
 const NO_CHANNEL = "Choose how you want to pay.";
+const CHANNEL_OFF = "That way of paying isn't available right now. Choose another, or pay at the clinic.";
 
 /**
  * Public: called from the patient's payment page (/pay/<key>), where the key is the only credential.
@@ -43,9 +46,11 @@ const NO_CHANNEL = "Choose how you want to pay.";
  */
 export async function payInvoiceOnline(key: string, channel: CheckoutChannel): Promise<ActionResult & { url?: string }> {
   if (!isChannel(channel)) return fail(NO_CHANNEL);
-  if (!paymentsConfigured()) return fail("Online payment isn't available right now. Please pay at the clinic.");
   const invoice = await prisma.invoice.findUnique({ where: { payKey: key } });
   if (!invoice?.payKey) return fail("This payment link isn't valid.");
+  if (!(await channelsForInvoice(invoice.id)).includes(channel)) return fail(CHANNEL_OFF);
+  const problem = await consultationPayProblem(invoice.id);
+  if (problem) return fail(problem);
 
   // A payment may have just completed in another tab; don't start a second one for the same balance.
   await syncInvoiceCheckouts(invoice.id);
@@ -60,14 +65,16 @@ export async function payInvoiceOnline(key: string, channel: CheckoutChannel): P
   }
 }
 
-/** A signed-in patient pays their own invoice; Monime sends them back to the invoice in their portal. */
+/** A signed-in patient pays their own invoice; the provider sends them back to the invoice in their portal. */
 export async function payMyInvoice(invoiceId: string, channel: CheckoutChannel): Promise<ActionResult & { url?: string }> {
   const me = await authorize(Role.PATIENT);
   if (!me) return DENIED;
   if (!isChannel(channel)) return fail(NO_CHANNEL);
-  if (!paymentsConfigured()) return fail("Online payment isn't available right now. Please pay at the clinic.");
   const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, patientId: me.id } });
   if (!invoice) return fail("Invoice not found.");
+  if (!(await channelsForInvoice(invoice.id)).includes(channel)) return fail(CHANNEL_OFF);
+  const problem = await consultationPayProblem(invoice.id);
+  if (problem) return fail(problem);
 
   await syncInvoiceCheckouts(invoice.id);
   const fresh = await prisma.invoice.findUniqueOrThrow({ where: { id: invoice.id } });

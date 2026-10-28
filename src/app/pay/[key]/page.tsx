@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { formatInvoiceNumber, formatMoney } from "@/lib/money";
 import { paymentsConfigured, syncInvoiceCheckouts } from "@/lib/payments";
+import { channelsForInvoice, consultationPayProblem } from "@/lib/consultations";
 import Logo from "@/components/Logo";
 import PayButton from "@/components/payments/PayButton";
 
@@ -22,7 +23,7 @@ export default async function PayInvoicePage({ params, searchParams }: Props) {
   const { paid, cancelled } = await searchParams;
 
   const found = await prisma.invoice.findUnique({ where: { payKey: key }, select: { id: true } });
-  // Coming back from Monime (or reloading): record any payment that has gone through.
+  // Coming back from the checkout (or reloading): record any payment that has gone through.
   if (found) await syncInvoiceCheckouts(found.id);
 
   const invoice = found
@@ -46,6 +47,7 @@ export default async function PayInvoicePage({ params, searchParams }: Props) {
     );
   }
 
+  const [channels, payProblem] = await Promise.all([channelsForInvoice(invoice.id), consultationPayProblem(invoice.id)]);
   const balance = invoice.total.minus(invoice.amountPaid);
   const open = invoice.status === "UNPAID" || invoice.status === "PARTIAL";
   const number = formatInvoiceNumber(invoice.number);
@@ -96,8 +98,10 @@ export default async function PayInvoicePage({ params, searchParams }: Props) {
             <p className="pay-status">We&apos;re confirming your payment. This can take a minute: refresh this page shortly.</p>
           )}
           {cancelled && <p className="pay-status">The payment was cancelled. You can try again below.</p>}
-          {paymentsConfigured() ? (
-            <PayButton payKey={key} amount={formatMoney(balance.toString())} />
+          {payProblem ? (
+            <p className="pay-status">{payProblem}</p>
+          ) : paymentsConfigured() && channels.length > 0 ? (
+            <PayButton payKey={key} amount={formatMoney(balance.toString())} channels={channels} />
           ) : (
             <p className="pay-status">Online payment isn&apos;t available right now. Please pay at the clinic.</p>
           )}

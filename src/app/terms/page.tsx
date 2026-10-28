@@ -26,7 +26,7 @@ export default function TermsPage() {
           <dt>Effective Date</dt>
           <dd>17th October 2026</dd>
           <dt>Last Updated</dt>
-          <dd>17th October 2026</dd>
+          <dd>28th October 2026</dd>
           <dt>Platform</dt>
           <dd>MiDokta Telemedicine Platform</dd>
           <dt>Operator</dt>
@@ -406,6 +406,15 @@ export default function TermsPage() {
           11.7. Any subscription, recurring payment or automatic renewal must be clearly disclosed before purchase, with a
           reasonable method for cancellation.
         </p>
+        <p>
+          11.8. Where a healthcare professional charges a consultation fee, the patient pays it when booking, and the
+          booking request is sent to the healthcare professional only once the fee has been paid. If the healthcare
+          professional declines the booking, or the appointment is cancelled by the patient, the healthcare professional
+          or the platform before the consultation is completed, the full fee, including the platform fee described in
+          clause 12.7, is refunded to the mobile money or wallet account the patient gave when booking. Refunds are sent
+          automatically but may be subject to payment-provider processing times. Patients are responsible for giving a
+          correct refund account.
+        </p>
 
         <h2>12. Payments and Third-Party Payment Providers</h2>
         <p>
@@ -417,6 +426,10 @@ export default function TermsPage() {
           including mobile money (such as Orange Money and Afrimoney) and card payments, are currently processed by{" "}
           <a href="https://monime.io" target="_blank" rel="noreferrer">
             Monime
+          </a>
+          , and TenkiPay wallet payments by{" "}
+          <a href="https://me.tenkipay.com" target="_blank" rel="noreferrer">
+            TenkiPay
           </a>
           . Their processing of payment information may be subject to their own terms and privacy notices.
         </p>
@@ -434,6 +447,24 @@ export default function TermsPage() {
         <p>
           12.6. Disputed charges should be reported to <a href="tel:+23277530708">+232 77 530708</a>. Nothing in these
           Terms limits statutory rights relating to unauthorised transactions, defective services or consumer complaints.
+        </p>
+        <p>
+          12.7. <strong>Platform fee.</strong> Healthcare professionals set their own consultation fees, which are shown to
+          patients before booking. TechHealth Africa retains a platform fee of ten percent (10%) of each consultation fee
+          paid through MiDokta. The platform fee is part of the consultation fee shown to the patient and is not charged
+          to the patient in addition to it.
+        </p>
+        <p>
+          12.8. The remaining ninety percent (90%) of the consultation fee is paid to the healthcare professional, to the
+          mobile money or wallet account they provide in MiDokta, once the consultation is marked as completed. Charges
+          made by payment providers for collecting the fee and paying the healthcare professional are covered by the
+          platform fee and are not deducted from the healthcare professional&apos;s share. Healthcare professionals are
+          responsible for providing a correct payout account and for any taxes due on their earnings.
+        </p>
+        <p>
+          12.9. Where a consultation fee is refunded under clause 11.8, no platform fee is retained and no payment is
+          made to the healthcare professional for that booking. If a payout or refund cannot be completed automatically,
+          TechHealth Africa will arrange it by other means within a reasonable time.
         </p>
 
         <h2>13. Healthcare Professionals and Provider Verification</h2>

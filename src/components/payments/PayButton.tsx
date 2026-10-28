@@ -28,13 +28,29 @@ const CHANNELS: { channel: CheckoutChannel; title: string; detail: React.ReactNo
     detail: "SLCB, GTBank and other local banks",
     icon: "fa-solid fa-building-columns",
   },
+  {
+    channel: "TENKIPAY",
+    title: "TenkiPay",
+    detail: "Pay from your TenkiPay wallet",
+    icon: "fa-solid fa-wallet",
+  },
 ];
 
 /**
- * The patient picks mobile money, card or bank, and we send them to a Monime checkout for that method.
- * From the public payment link pass `payKey`; from the patient portal pass `invoiceId`.
+ * The patient picks one of `channels` (mobile money, card, bank or TenkiPay), and we send them to that
+ * method's checkout. From the public payment link pass `payKey`; from the patient portal pass `invoiceId`.
  */
-export default function PayButton({ payKey, invoiceId, amount }: { payKey?: string; invoiceId?: string; amount: string }) {
+export default function PayButton({
+  payKey,
+  invoiceId,
+  amount,
+  channels,
+}: {
+  payKey?: string;
+  invoiceId?: string;
+  amount: string;
+  channels: CheckoutChannel[];
+}) {
   const { busy, error, run } = useServerAction();
   const [chosen, setChosen] = useState<CheckoutChannel | null>(null);
 
@@ -52,7 +68,7 @@ export default function PayButton({ payKey, invoiceId, amount }: { payKey?: stri
     <>
       <p className="pay-choose">Pay {amount} with</p>
       <div className="pay-options">
-        {CHANNELS.map((c) => (
+        {CHANNELS.filter((c) => channels.includes(c.channel)).map((c) => (
           <button key={c.channel} type="button" className="pay-option" disabled={busy} onClick={() => pay(c.channel)}>
             <i className={`${busy && chosen === c.channel ? "fa-solid fa-spinner fa-spin" : c.icon} pay-option-icon`} />
             <span className="pay-option-text">
