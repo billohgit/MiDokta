@@ -3,13 +3,7 @@
 import { useState, useTransition } from "react";
 import type { MobileWallet, PayoutStatus } from "@prisma/client";
 import { saveConsultationSettings } from "@/app/actions/consultations";
-
-const WALLETS: { value: MobileWallet; label: string }[] = [
-  { value: "ORANGE_MONEY", label: "Orange Money" },
-  { value: "AFRIMONEY", label: "Afrimoney" },
-  { value: "QMONEY", label: "QMoney" },
-  { value: "TENKIPAY", label: "TenkiPay wallet" },
-];
+import { WALLET_OPTIONS } from "@/components/payments/wallets";
 
 const PAYOUT_STATUS: Record<PayoutStatus, string> = {
   PENDING: "Waiting",
@@ -84,7 +78,7 @@ export default function ConsultationFeeSettings({ fee, wallet, account, platform
                 className="detail-input"
               >
                 <option value="">Not set</option>
-                {WALLETS.map((w) => (
+                {WALLET_OPTIONS.map((w) => (
                   <option key={w.value} value={w.value}>
                     {w.label}
                   </option>

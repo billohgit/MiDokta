@@ -82,8 +82,31 @@ enum MobileWallet {
 enum PayoutKind {
   /// The doctor's share of a consultation fee, sent once the visit is completed.
   DOCTOR_SHARE
-  /// The whole fee back to the patient, when the visit is declined or cancelled.
+  /// The whole amount back to the patient: a consultation declined or cancelled, or a pharmacy order cancelled.
   REFUND
+  /// A pharmacy's share of an order, sent once the patient has it.
+  PHARMACY_SHARE
+}
+
+enum PharmacyOrderStatus {
+  /// Placed, waiting for the patient to pay.
+  AWAITING_PAYMENT
+  /// Paid; the pharmacy is preparing it.
+  PAID
+  /// Out for delivery, or ready for pickup.
+  DISPATCHED
+  /// The pharmacy says it was handed over; the patient confirms, or it's confirmed automatically.
+  DELIVERED
+  /// The patient has it: the pharmacy has been paid.
+  RECEIVED
+  /// The patient says it never arrived: an admin decides.
+  DISPUTED
+  CANCELLED
+}
+
+enum Fulfilment {
+  DELIVERY
+  PICKUP
 }
 
 enum PayoutStatus {
@@ -232,6 +255,9 @@ model User {
   consultationsBooked Consultation[]            @relation("PatientConsultations")
   consultationsGiven  Consultation[]            @relation("DoctorConsultations")
   payoutsReceived     Payout[]
+  pharmacy            Pharmacy?
+  cartItems           CartItem[]
+  pharmacyOrders      PharmacyOrder[]
 
   @@index([role])
 }
@@ -406,6 +432,8 @@ model Invoice {
   checkouts     CheckoutSession[]
   /// Set when this invoice is a consultation fee paid at booking.
   consultation  Consultation?
+  /// Set when this invoice is a pharmacy order.
+  pharmacyOrder PharmacyOrder?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
@@ -493,11 +521,13 @@ model Consultation {
   @@index([doctorId])
 }
 
-/** Money sent out of the platform's Monime or TenkiPay account for a consultation. */
+/** Money sent out of the platform's Monime or TenkiPay account for a consultation or a pharmacy order. */
 model Payout {
-  id             String       @id @default(cuid())
-  consultationId String
-  consultation   Consultation @relation(fields: [consultationId], references: [id])
+  id             String         @id @default(cuid())
+  consultationId String?
+  consultation   Consultation?  @relation(fields: [consultationId], references: [id])
+  orderId        String?
+  order          PharmacyOrder? @relation(fields: [orderId], references: [id])
   kind           PayoutKind
   recipientId    String
   recipient      User         @relation(fields: [recipientId], references: [id])
@@ -514,9 +544,122 @@ model Payout {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  /// At most one doctor payment and one refund per consultation.
+  /// At most one payment and one refund per consultation, and per order.
   @@unique([consultationId, kind])
+  @@unique([orderId, kind])
   @@index([status])
+}
+
+/** An independent pharmacy, run by a pharmacist, selling its own stock to patients. */
+model Pharmacy {
+  id            String            @id @default(cuid())
+  ownerId       String            @unique
+  owner         User              @relation(fields: [ownerId], references: [id])
+  name          String
+  address       String
+  city          String?
+  phone         String?
+  /// What home delivery costs; null means pickup only.
+  deliveryFee   Decimal?          @db.Decimal(12, 2)
+  /// Where the pharmacy's share of orders is sent.
+  payoutWallet  MobileWallet?
+  payoutAccount String?
+  /// Admins can take a pharmacy off the shop.
+  isActive      Boolean           @default(true)
+  products      PharmacyProduct[]
+  orders        PharmacyOrder[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+/** Something a pharmacy sells, with its own price and stock (separate from the clinic's inventory). */
+model PharmacyProduct {
+  id          String              @id @default(cuid())
+  pharmacyId  String
+  pharmacy    Pharmacy            @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+  name        String
+  strength    String?
+  form        String?
+  description String?
+  price       Decimal             @db.Decimal(12, 2)
+  /// Units in stock. Taken when an order is paid, put back when a paid order is cancelled.
+  quantity    Int                 @default(0)
+  isActive    Boolean             @default(true)
+  cartItems   CartItem[]
+  orderItems  PharmacyOrderItem[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([pharmacyId])
+  @@index([isActive, name])
+}
+
+/** A patient's shopping cart: one row per product, all from one pharmacy. */
+model CartItem {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   PharmacyProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int
+  createdAt DateTime        @default(now())
+
+  @@unique([userId, productId])
+}
+
+/**
+ * A patient's order from one pharmacy, paid online through its invoice. Of the medicines, the
+ * platform keeps platformFee; the pharmacy is paid pharmacyShare (the rest, plus the delivery fee)
+ * once the patient has the order. A paid order cancelled before then is refunded in full.
+ */
+model PharmacyOrder {
+  id              String              @id @default(cuid())
+  number          Int                 @unique @default(autoincrement())
+  patientId       String
+  patient         User                @relation(fields: [patientId], references: [id])
+  pharmacyId      String
+  pharmacy        Pharmacy            @relation(fields: [pharmacyId], references: [id])
+  invoiceId       String              @unique
+  invoice         Invoice             @relation(fields: [invoiceId], references: [id])
+  status          PharmacyOrderStatus @default(AWAITING_PAYMENT)
+  fulfilment      Fulfilment
+  deliveryAddress String?
+  contactPhone    String
+  subtotal        Decimal             @db.Decimal(12, 2)
+  deliveryFee     Decimal             @db.Decimal(12, 2)
+  total           Decimal             @db.Decimal(12, 2)
+  platformFee     Decimal             @db.Decimal(12, 2)
+  pharmacyShare   Decimal             @db.Decimal(12, 2)
+  refundWallet    MobileWallet
+  refundAccount   String
+  paidVia         CheckoutChannel?
+  paidAt          DateTime?
+  dispatchedAt    DateTime?
+  deliveredAt     DateTime?
+  receivedAt      DateTime?
+  cancelledAt     DateTime?
+  /// Why it was cancelled, or what the patient reported when disputing it.
+  note            String?
+  items           PharmacyOrderItem[]
+  payouts         Payout[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([pharmacyId, status])
+  @@index([patientId])
+  @@index([status, deliveredAt])
+}
+
+/** A line of an order, copied from the product when ordered so later edits don't change it. */
+model PharmacyOrderItem {
+  id        String           @id @default(cuid())
+  orderId   String
+  order     PharmacyOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   PharmacyProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name      String
+  unitPrice Decimal          @db.Decimal(12, 2)
+  quantity  Int
 }
 
 model Notification {

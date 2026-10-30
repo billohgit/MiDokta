@@ -20,7 +20,8 @@ export type SmsCategory =
   | "INVOICE_CREATED"
   | "PAYMENT_RECEIVED"
   | "LOGIN_CODE"
-  | "CHAT";
+  | "CHAT"
+  | "PHARMACY_ORDER";
 
 type SmsInput = {
   userId: string;

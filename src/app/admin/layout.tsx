@@ -17,6 +17,7 @@ const NAV: NavItem[] = [
   { href: "/admin/verifications", label: "verification", icon: "fa-id-card" },
   { href: "/admin/hospitals", label: "hospitals", icon: "fa-hospital" },
   { href: "/admin/inventory", label: "pharmacy", icon: "fa-boxes-stacked" },
+  { href: "/admin/pharmacies", label: "pharmacies", icon: "fa-store" },
   { href: "/admin/billing", label: "billing", icon: "fa-file-invoice-dollar" },
   { href: "/admin/chat", label: "chat", icon: "fa-comments" },
   { href: "/admin/sms", label: "sms", icon: "fa-comment-sms" },

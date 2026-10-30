@@ -9,7 +9,7 @@ import { queueSms } from "@/lib/sms";
 import { sms } from "@/lib/sms/templates";
 import { appBaseUrl } from "@/lib/url";
 import { ensurePayKey, payLink, paymentsConfigured, startCheckout, syncInvoiceCheckouts } from "@/lib/payments";
-import { channelsForInvoice, consultationPayProblem } from "@/lib/consultations";
+import { channelsForInvoice, invoicePayProblem } from "@/lib/payouts";
 
 const NOT_SET_UP =
   "Online payments aren't set up yet. Add MONIME_ACCESS_TOKEN and MONIME_SPACE_ID, or TENKIPAY_PUBLIC_KEY and TENKIPAY_SECRET_KEY, to the server settings.";
@@ -49,7 +49,7 @@ export async function payInvoiceOnline(key: string, channel: CheckoutChannel): P
   const invoice = await prisma.invoice.findUnique({ where: { payKey: key } });
   if (!invoice?.payKey) return fail("This payment link isn't valid.");
   if (!(await channelsForInvoice(invoice.id)).includes(channel)) return fail(CHANNEL_OFF);
-  const problem = await consultationPayProblem(invoice.id);
+  const problem = await invoicePayProblem(invoice.id);
   if (problem) return fail(problem);
 
   // A payment may have just completed in another tab; don't start a second one for the same balance.
@@ -73,7 +73,7 @@ export async function payMyInvoice(invoiceId: string, channel: CheckoutChannel):
   const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, patientId: me.id } });
   if (!invoice) return fail("Invoice not found.");
   if (!(await channelsForInvoice(invoice.id)).includes(channel)) return fail(CHANNEL_OFF);
-  const problem = await consultationPayProblem(invoice.id);
+  const problem = await invoicePayProblem(invoice.id);
   if (problem) return fail(problem);
 
   await syncInvoiceCheckouts(invoice.id);

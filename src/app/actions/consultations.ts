@@ -5,7 +5,7 @@ import { MobileWallet, Prisma, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { authorize } from "@/lib/auth";
 import { type ActionResult, DENIED, decimalValue, enumValue, fail, text } from "@/lib/form";
-import { sendWaitingPayouts, walletAccount } from "@/lib/consultations";
+import { sendWaitingPayouts, walletAccount } from "@/lib/payouts";
 
 const MAX_FEE = 100_000;
 
@@ -30,7 +30,7 @@ export async function saveConsultationSettings(formData: FormData): Promise<Acti
     where: { id: me.id },
     data: { consultationFee: fee ? new Prisma.Decimal(fee) : null, payoutWallet, payoutAccount },
   });
-  await sendWaitingPayouts(doctor);
+  await sendWaitingPayouts(doctor.id, "DOCTOR_SHARE", doctor.payoutWallet, doctor.payoutAccount);
 
   revalidatePath("/", "layout");
   return { ok: true };

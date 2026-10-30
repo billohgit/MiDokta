@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { formatInvoiceNumber, formatMoney } from "@/lib/money";
 import { paymentsConfigured, syncInvoiceCheckouts } from "@/lib/payments";
-import { WALLET_LABEL, channelsForInvoice, consultationPayProblem } from "@/lib/consultations";
+import { WALLET_LABEL, channelsForInvoice, invoicePayProblem } from "@/lib/payouts";
+import { orderNumber } from "@/lib/pharmacy";
 import PayButton from "@/components/payments/PayButton";
 import { INVOICE_STATUS_CLASS, INVOICE_STATUS_LABEL, PAYMENT_METHOD_LABEL } from "@/components/billing/shared";
 import { formatDate } from "@/components/appointments/shared";
@@ -31,12 +32,13 @@ export default async function PatientInvoicePage({ params, searchParams }: Props
       items: true,
       payments: { orderBy: { paidAt: "asc" } },
       checkouts: { where: { status: "PENDING" }, select: { id: true } },
+      pharmacyOrder: { select: { id: true, number: true } },
       consultation: {
         include: { doctor: { select: { firstName: true, lastName: true } }, payouts: { where: { kind: "REFUND" } } },
       },
     },
   });
-  const [channels, payProblem] = await Promise.all([channelsForInvoice(id), consultationPayProblem(id)]);
+  const [channels, payProblem] = await Promise.all([channelsForInvoice(id), invoicePayProblem(id)]);
   const booking = invoice.consultation;
   const refund = booking?.payouts[0];
 
@@ -85,6 +87,13 @@ export default async function PatientInvoicePage({ params, searchParams }: Props
             </li>
           ))}
         </ul>
+
+        {invoice.pharmacyOrder && (
+          <p className="pay-status">
+            This is your pharmacy order {orderNumber(invoice.pharmacyOrder.number)}.{" "}
+            <Link href={`/patient/pharmacy/orders/${invoice.pharmacyOrder.id}`}>Track your order</Link>
+          </p>
+        )}
 
         {booking && (
           <p className="pay-status">

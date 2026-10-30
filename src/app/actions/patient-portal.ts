@@ -10,7 +10,8 @@ import { FRONT_DESK_ROLES } from "@/lib/roles";
 import { queueSms } from "@/lib/sms";
 import { sms } from "@/lib/sms/templates";
 import { formatDate, formatTime } from "@/components/appointments/shared";
-import { bookConsultation, channelsRefundableTo, feeOf, onAppointmentStatusChanged, walletAccount } from "@/lib/consultations";
+import { bookConsultation, feeOf, onAppointmentStatusChanged } from "@/lib/consultations";
+import { channelsRefundableTo, walletAccount } from "@/lib/payouts";
 
 /** Requests a patient can have waiting at once, so the inbox can't be flooded. */
 const MAX_OPEN_REQUESTS = 5;

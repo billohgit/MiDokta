@@ -38,6 +38,8 @@ const en = {
     schedule: "Schedule",
     prescriptions: "Prescriptions",
     stock: "Stock",
+    myPharmacy: "My Pharmacy",
+    pharmacies: "Pharmacies",
   },
   topbar: {
     toggleSidebar: "Toggle sidebar",
@@ -132,6 +134,8 @@ const fr: Dictionary = {
     schedule: "Planning",
     prescriptions: "Ordonnances",
     stock: "Stock",
+    myPharmacy: "Ma pharmacie",
+    pharmacies: "Pharmacies",
   },
   topbar: {
     toggleSidebar: "Afficher ou masquer le menu",

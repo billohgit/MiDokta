@@ -26,7 +26,7 @@ export default function TermsPage() {
           <dt>Effective Date</dt>
           <dd>17th October 2026</dd>
           <dt>Last Updated</dt>
-          <dd>28th October 2026</dd>
+          <dd>30th October 2026</dd>
           <dt>Platform</dt>
           <dd>MiDokta Telemedicine Platform</dd>
           <dt>Operator</dt>
@@ -465,6 +465,27 @@ export default function TermsPage() {
           12.9. Where a consultation fee is refunded under clause 11.8, no platform fee is retained and no payment is
           made to the healthcare professional for that booking. If a payout or refund cannot be completed automatically,
           TechHealth Africa will arrange it by other means within a reasonable time.
+        </p>
+        <p>
+          12.10. <strong>Pharmacy orders.</strong> Medicines ordered through MiDokta are sold and supplied by independent
+          pharmacies, which set their own prices and delivery fees and are responsible for the medicines they supply,
+          including their quality, storage, labelling and compliance with pharmacy law. TechHealth Africa provides the
+          platform and handles payment, and is not the seller. Patients pay for an order online when placing it.
+        </p>
+        <p>
+          12.11. TechHealth Africa retains a platform fee of ten percent (10%) of the price of the medicines in each
+          completed order; the platform fee is part of the prices shown and is not charged in addition to them. The
+          pharmacy receives the remainder, together with the whole delivery fee, only after the patient confirms they
+          have received the order or, if the patient neither confirms nor reports a problem, three (3) days after the
+          pharmacy marks it delivered or collected.
+        </p>
+        <p>
+          12.12. An order cancelled by the patient before the pharmacy sends it out, or by the pharmacy or TechHealth
+          Africa before the patient has it, is refunded in full to the refund account the patient gave when ordering. A
+          patient who has not received an order marked delivered should report it in the app within three (3) days;
+          payment to the pharmacy is then held while TechHealth Africa reviews the matter with both parties and decides
+          whether to pay the pharmacy or refund the patient. Nothing in this clause limits any right the patient has
+          against the pharmacy under consumer-protection law.
         </p>
 
         <h2>13. Healthcare Professionals and Provider Verification</h2>

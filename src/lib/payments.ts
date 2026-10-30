@@ -10,6 +10,7 @@ import { FRONT_DESK_ROLES } from "@/lib/roles";
 import { queueSms } from "@/lib/sms";
 import { sms } from "@/lib/sms/templates";
 import { onConsultationPaid } from "@/lib/consultations";
+import { onPharmacyOrderPaid } from "@/lib/pharmacy";
 
 /**
  * Online payments run on Monime (monime.io), whose hosted checkout takes mobile money (Orange Money,
@@ -336,8 +337,11 @@ export async function settleCheckout(checkout: CheckoutSession): Promise<void> {
   if (!result) return;
 
   const { invoice, amount, balance } = result;
-  // A consultation booked with a fee reaches the doctor only now that it's paid.
-  if (!balance.isPositive()) await onConsultationPaid(invoice.id, checkout.channel);
+  // A consultation booked with a fee reaches the doctor, and a pharmacy order the pharmacy, only once paid.
+  if (!balance.isPositive()) {
+    await onConsultationPaid(invoice.id, checkout.channel);
+    await onPharmacyOrderPaid(invoice.id, checkout.channel);
+  }
   const by = checkout.channel ? ` by ${CHANNEL_NAME[checkout.channel]}` : "";
   const number = formatInvoiceNumber(invoice.number);
   await queueSms({

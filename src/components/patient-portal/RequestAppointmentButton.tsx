@@ -6,16 +6,10 @@ import type { MobileWallet } from "@prisma/client";
 import { requestAppointment } from "@/app/actions/patient-portal";
 import Modal from "@/components/ui/Modal";
 import useServerAction from "@/components/ui/useServerAction";
+import { WALLET_OPTIONS } from "@/components/payments/wallets";
 
 /** `fee` is formatted, or null when booking the doctor is free. */
 type Doctor = { id: string; name: string; specialty: string | null; fee: string | null };
-
-const REFUND_WALLETS: { value: MobileWallet; label: string }[] = [
-  { value: "ORANGE_MONEY", label: "Orange Money" },
-  { value: "AFRIMONEY", label: "Afrimoney" },
-  { value: "QMONEY", label: "QMoney" },
-  { value: "TENKIPAY", label: "TenkiPay wallet" },
-];
 
 /**
  * "Request an appointment" button and form. The clinic or the doctor confirms the time. For a doctor
@@ -111,7 +105,7 @@ export default function RequestAppointmentButton({ doctors, phone }: { doctors: 
                   <label className="field">
                     <span>Refund to *</span>
                     <select name="refundWallet" value={wallet} onChange={(e) => setWallet(e.target.value as MobileWallet)}>
-                      {REFUND_WALLETS.map((w) => (
+                      {WALLET_OPTIONS.map((w) => (
                         <option key={w.value} value={w.value}>
                           {w.label}
                         </option>

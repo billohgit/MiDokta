@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { formatInvoiceNumber, formatMoney } from "@/lib/money";
 import { paymentsConfigured, syncInvoiceCheckouts } from "@/lib/payments";
-import { channelsForInvoice, consultationPayProblem } from "@/lib/consultations";
+import { channelsForInvoice, invoicePayProblem } from "@/lib/payouts";
 import Logo from "@/components/Logo";
 import PayButton from "@/components/payments/PayButton";
 
@@ -47,7 +47,7 @@ export default async function PayInvoicePage({ params, searchParams }: Props) {
     );
   }
 
-  const [channels, payProblem] = await Promise.all([channelsForInvoice(invoice.id), consultationPayProblem(invoice.id)]);
+  const [channels, payProblem] = await Promise.all([channelsForInvoice(invoice.id), invoicePayProblem(invoice.id)]);
   const balance = invoice.total.minus(invoice.amountPaid);
   const open = invoice.status === "UNPAID" || invoice.status === "PARTIAL";
   const number = formatInvoiceNumber(invoice.number);

@@ -96,6 +96,7 @@ export async function recordPayment(formData: FormData): Promise<ActionResult> {
   if (!method) return fail("Choose a payment method.");
   // The doctor's share and any refund are sent out of the online payment, so the fee must come in that way.
   if (await prisma.consultation.count({ where: { invoiceId } })) return fail("Consultation fees are paid online by the patient when they book.");
+  if (await prisma.pharmacyOrder.count({ where: { invoiceId } })) return fail("Pharmacy orders are paid online by the patient.");
 
   const result = await prisma.$transaction(async (tx) => {
     // Lock the invoice row so concurrent payments can't overpay it.

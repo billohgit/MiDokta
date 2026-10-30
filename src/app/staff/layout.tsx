@@ -29,6 +29,7 @@ const NAV: Partial<Record<Role, NavItem[]>> = {
     DASHBOARD,
     { href: "/staff/prescriptions", label: "prescriptions", icon: "fa-pills" },
     { href: "/staff/inventory", label: "stock", icon: "fa-boxes-stacked" },
+    { href: "/staff/pharmacy", label: "myPharmacy", icon: "fa-store" },
     PATIENTS,
     ...COMMON,
   ],
