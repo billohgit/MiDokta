@@ -20,6 +20,7 @@ export default async function CartPage() {
         productId: i.productId,
         name: i.product.name,
         detail: [i.product.strength, i.product.form].filter(Boolean).join(" · "),
+        imageUrl: i.product.imageUrl,
         unitPrice: i.product.price.toNumber(),
         quantity: i.quantity,
         inStock: i.product.quantity,

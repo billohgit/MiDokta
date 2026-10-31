@@ -92,9 +92,14 @@ export default function ShopView({ products, cartCount, cartPharmacy }: Props) {
         <div className="shop-grid">
           {visible.map((p) => (
             <article key={p.id} className="card product-card">
-              <div className="product-icon">
-                <i className="fa-solid fa-capsules" />
-              </div>
+              {p.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.imageUrl} alt={`${p.name} ${p.detail}`} className="product-image" loading="lazy" />
+              ) : (
+                <div className="product-image product-image-empty">
+                  <i className="fa-solid fa-capsules" />
+                </div>
+              )}
               <h3>{p.name}</h3>
               {p.detail && <p className="section-sub">{p.detail}</p>}
               {p.description && <p className="product-desc">{p.description}</p>}

@@ -7,11 +7,14 @@ import { authorize } from "@/lib/auth";
 import { type ActionResult, DENIED, enumValue, fail, intValue, phoneValue, PHONE_HINT, text } from "@/lib/form";
 import { channelsRefundableTo, sendWaitingPayouts, walletAccount } from "@/lib/payouts";
 import { cancelOrder, confirmReceived, dispatchOrder, markDelivered, placeOrder, reportNotReceived } from "@/lib/pharmacy";
+import { AVATAR_TYPES, deleteProductImage, saveProductImage } from "@/lib/uploads";
 
 const MONEY = /^\d+(\.\d{1,2})?$/;
 const MAX_PRICE = 1_000_000;
 const MAX_QUANTITY = 100_000;
 const MAX_IN_CART = 99;
+/** Photos are shrunk in the browser first, so this only stops unshrunk uploads. */
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 const refresh = () => revalidatePath("/", "layout");
 
 const money = (formData: FormData, key: string) => {
@@ -178,11 +181,23 @@ export async function saveProduct(formData: FormData): Promise<ActionResult> {
     quantity,
   };
   const id = text(formData, "id");
-  if (id) {
-    const { count } = await prisma.pharmacyProduct.updateMany({ where: { id, pharmacyId: pharmacy.id }, data });
-    if (count === 0) return fail("Product not found.");
+  const existing = id ? await prisma.pharmacyProduct.findFirst({ where: { id, pharmacyId: pharmacy.id } }) : null;
+  if (id && !existing) return fail("Product not found.");
+
+  // A new photo replaces the old one; "removeImage" clears it; neither leaves it as it is.
+  const image = formData.get("image");
+  const upload = image instanceof File && image.size > 0 ? image : null;
+  const ext = upload && AVATAR_TYPES[upload.type];
+  if (upload && !ext) return fail("Use a JPG, PNG or WebP photo.");
+  if (upload && upload.size > MAX_IMAGE_BYTES) return fail("The photo must be 3 MB or smaller.");
+  const imageUrl = upload ? await saveProductImage(`${pharmacy.id}-${Date.now()}.${ext}`, upload) : formData.get("removeImage") === "on" ? null : undefined;
+
+  if (existing) {
+    await prisma.pharmacyProduct.update({ where: { id: existing.id }, data: { ...data, imageUrl } });
+    // Drop the old photo only once the new state is saved.
+    if (imageUrl !== undefined) await deleteProductImage(existing.imageUrl);
   } else {
-    await prisma.pharmacyProduct.create({ data: { ...data, pharmacyId: pharmacy.id } });
+    await prisma.pharmacyProduct.create({ data: { ...data, imageUrl, pharmacyId: pharmacy.id } });
   }
   refresh();
   return { ok: true };

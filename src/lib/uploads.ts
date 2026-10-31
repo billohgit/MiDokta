@@ -108,6 +108,31 @@ export async function deleteIdCard(ref: string | null | undefined): Promise<void
   if (useBlobStore() && ref.startsWith("https://")) await del(ref, { token: privateToken() }).catch(() => {});
 }
 
+export const PRODUCT_DIR = path.join(UPLOAD_ROOT, "products");
+const LOCAL_PRODUCT = /^\/api\/uploads\/products\/([\w-]+\.\w+)$/;
+
+/** Stores a pharmacy product photo and returns its URL. Product photos are public, like avatars. */
+export async function saveProductImage(filename: string, file: File): Promise<string> {
+  if (useBlobStore()) {
+    const { url } = await put(`products/${filename}`, file, { access: "public", contentType: file.type, addRandomSuffix: true });
+    return url;
+  }
+  await mkdir(PRODUCT_DIR, { recursive: true });
+  await writeFile(path.join(PRODUCT_DIR, filename), Buffer.from(await file.arrayBuffer()));
+  return `/api/uploads/products/${filename}`;
+}
+
+/** Removes a product photo we stored, ignoring any other URL. */
+export async function deleteProductImage(url: string | null | undefined): Promise<void> {
+  if (!url) return;
+  const local = url.match(LOCAL_PRODUCT)?.[1];
+  if (local) {
+    await unlink(path.join(PRODUCT_DIR, local)).catch(() => {});
+    return;
+  }
+  if (useBlobStore() && url.startsWith("https://")) await del(url).catch(() => {});
+}
+
 /** The bytes of a stored avatar (local or Vercel Blob), for server-side processing. */
 export async function readAvatar(url: string): Promise<{ data: Buffer; contentType: string } | null> {
   const local = url.match(LOCAL_AVATAR)?.[1];

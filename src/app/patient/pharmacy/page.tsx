@@ -28,6 +28,7 @@ export default async function PharmacyShopPage() {
         name: p.name,
         detail: [p.strength, p.form].filter(Boolean).join(" · "),
         description: p.description,
+        imageUrl: p.imageUrl,
         price: formatMoney(p.price.toString()),
         inStock: p.quantity,
         pharmacyId: p.pharmacy.id,

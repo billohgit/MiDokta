@@ -122,6 +122,7 @@ export default async function MyPharmacyPage({ searchParams }: { searchParams: P
             strength: p.strength,
             form: p.form,
             description: p.description,
+            imageUrl: p.imageUrl,
             price: p.price.toString(),
             quantity: p.quantity,
             isActive: p.isActive,

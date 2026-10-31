@@ -581,6 +581,8 @@ model PharmacyProduct {
   strength    String?
   form        String?
   description String?
+  /// A photo of the product, uploaded by the pharmacy (public, like avatars).
+  imageUrl    String?
   price       Decimal             @db.Decimal(12, 2)
   /// Units in stock. Taken when an order is paid, put back when a paid order is cancelled.
   quantity    Int                 @default(0)

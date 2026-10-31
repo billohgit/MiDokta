@@ -9,7 +9,7 @@ import useServerAction from "@/components/ui/useServerAction";
 import { WALLET_OPTIONS } from "@/components/payments/wallets";
 import { formatMoney } from "@/lib/money";
 
-export type CartLine = { productId: string; name: string; detail: string; unitPrice: number; quantity: number; inStock: number };
+export type CartLine = { productId: string; name: string; detail: string; imageUrl: string | null; unitPrice: number; quantity: number; inStock: number };
 
 type Props = {
   lines: CartLine[];
@@ -53,11 +53,21 @@ export default function CartView({ lines, pharmacy, phone, address }: Props) {
         <ul className="pay-items cart-lines">
           {lines.map((l) => (
             <li key={l.productId}>
-              <span>
-                <strong>{l.name}</strong>
-                {l.detail && <span className="section-sub"> {l.detail}</span>}
-                <br />
-                <span className="section-sub">{formatMoney(l.unitPrice)} each</span>
+              <span className="product-cell">
+                {l.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={l.imageUrl} alt="" className="product-thumb" />
+                ) : (
+                  <span className="product-thumb product-thumb-empty">
+                    <i className="fa-solid fa-capsules" />
+                  </span>
+                )}
+                <span>
+                  <strong>{l.name}</strong>
+                  {l.detail && <span className="section-sub"> {l.detail}</span>}
+                  <br />
+                  <span className="section-sub">{formatMoney(l.unitPrice)} each</span>
+                </span>
               </span>
               <span className="cart-qty">
                 <button

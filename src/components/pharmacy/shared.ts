@@ -30,6 +30,7 @@ export type ShopProduct = {
   name: string;
   detail: string;
   description: string | null;
+  imageUrl: string | null;
   price: string;
   inStock: number;
   pharmacyId: string;
