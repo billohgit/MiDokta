@@ -258,6 +258,15 @@ model User {
   pharmacy            Pharmacy?
   cartItems           CartItem[]
   pharmacyOrders      PharmacyOrder[]
+  testsAsPatient      DiagnosticTest[]          @relation("PatientTests")
+  testsOrdered        DiagnosticTest[]          @relation("TestsOrdered")
+  testResultsEntered  DiagnosticTest[]          @relation("TestResultsEntered")
+  referralsAsPatient  Referral[]                @relation("PatientReferrals")
+  referralsMade       Referral[]                @relation("ReferralsMade")
+  referralsReceived   Referral[]                @relation("ReferralsReceived")
+  referralsNavigated  Referral[]                @relation("ReferralsNavigated")
+  referralsClosed     Referral[]                @relation("ReferralsClosed")
+  careEvents          CareEvent[]               @relation("CareEventsLogged")
 
   @@index([role])
 }
@@ -285,6 +294,8 @@ model Appointment {
   rating   DoctorRating?
   /// The paid booking this appointment came from, if the doctor charges a fee.
   consultation Consultation?
+  /// The referral this appointment was booked for, if any.
+  referral     Referral?
 
   @@index([startsAt])
   @@index([status])
@@ -332,6 +343,8 @@ model MedicalRecord {
   followUpDate     DateTime? @db.Date
 
   prescriptions Prescription[]
+  tests         DiagnosticTest[]
+  referrals     Referral[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -662,6 +675,154 @@ model PharmacyOrderItem {
   name      String
   unitPrice Decimal          @db.Decimal(12, 2)
   quantity  Int
+}
+
+enum TestKind {
+  LAB
+  IMAGING
+  OTHER
+}
+
+enum TestStatus {
+  /// Ordered by the doctor; waiting for the sample (or the scan).
+  ORDERED
+  /// Sample taken or scan done; waiting for the result.
+  COLLECTED
+  /// Result in; waiting for the ordering doctor to review it.
+  RESULTED
+  /// Reviewed; waiting for the patient to be told.
+  REVIEWED
+  /// The patient has been told: nothing left to follow up.
+  COMMUNICATED
+  CANCELLED
+}
+
+enum Urgency {
+  ROUTINE
+  URGENT
+  EMERGENCY
+}
+
+enum ReferralStatus {
+  /// Referred; the navigator is arranging the appointment.
+  CREATED
+  /// An appointment with the specialist or facility is booked.
+  SCHEDULED
+  /// The patient went.
+  ATTENDED
+  /// The specialist's findings are back; waiting for the referring doctor to close the loop.
+  REPORT_RECEIVED
+  /// The referring doctor documented the outcome: the loop is closed.
+  CLOSED
+  CANCELLED
+}
+
+/** A diagnostic test or lab investigation a doctor ordered, followed until the patient knows the result. */
+model DiagnosticTest {
+  id           String      @id @default(cuid())
+  patientId    String
+  patient      User        @relation("PatientTests", fields: [patientId], references: [id])
+  orderedById  String
+  orderedBy    User        @relation("TestsOrdered", fields: [orderedById], references: [id])
+  /// The consultation it was ordered from, if any.
+  recordId     String?
+  record       MedicalRecord? @relation(fields: [recordId], references: [id], onDelete: SetNull)
+  name         String
+  kind         TestKind
+  urgency      Urgency     @default(ROUTINE)
+  /// What the doctor wants to know, for the lab and the reviewer.
+  question     String?
+  status       TestStatus  @default(ORDERED)
+  /// When the result should be in; past this with no result, the test is overdue.
+  dueAt        DateTime
+  collectedAt  DateTime?
+  result       String?
+  abnormal     Boolean?
+  resultedAt   DateTime?
+  resultById   String?
+  resultBy     User?       @relation("TestResultsEntered", fields: [resultById], references: [id], onDelete: SetNull)
+  reviewNote   String?
+  reviewedAt   DateTime?
+  communicatedAt DateTime?
+  cancelledAt  DateTime?
+  events       CareEvent[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([status, dueAt])
+  @@index([patientId])
+  @@index([orderedById, status])
+}
+
+/**
+ * A referral to a specialist (a MiDokta doctor or an outside facility), followed by a care
+ * navigator until the referring doctor documents the outcome and closes the loop.
+ */
+model Referral {
+  id                  String         @id @default(cuid())
+  number              Int            @unique @default(autoincrement())
+  patientId           String
+  patient             User           @relation("PatientReferrals", fields: [patientId], references: [id])
+  referredById        String
+  referredBy          User           @relation("ReferralsMade", fields: [referredById], references: [id])
+  recordId            String?
+  record              MedicalRecord? @relation(fields: [recordId], references: [id], onDelete: SetNull)
+  /// A MiDokta doctor the patient is referred to, or else `toFacility` outside MiDokta.
+  toDoctorId          String?
+  toDoctor            User?          @relation("ReferralsReceived", fields: [toDoctorId], references: [id], onDelete: SetNull)
+  toFacility          String?
+  specialty           String
+  reason              String
+  urgency             Urgency        @default(ROUTINE)
+  status              ReferralStatus @default(CREATED)
+  /// The staff member helping the patient through the referral.
+  navigatorId         String?
+  navigator           User?          @relation("ReferralsNavigated", fields: [navigatorId], references: [id], onDelete: SetNull)
+  /// What the patient needs to know: where to go, what to bring. Shown to them and texted on request.
+  patientInstructions String?
+  /// The navigator's next action, and when it's due.
+  nextStep            String?
+  nextStepDue         DateTime?
+  appointmentAt       DateTime?
+  /// For a referral to a MiDokta doctor, the appointment booked with them.
+  appointmentId       String?        @unique
+  appointment         Appointment?   @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  scheduledAt         DateTime?
+  attendedAt          DateTime?
+  reportSummary       String?
+  reportReceivedAt    DateTime?
+  /// The referring doctor's documented outcome, required to close the loop.
+  closureNote         String?
+  closedAt            DateTime?
+  closedById          String?
+  closedBy            User?          @relation("ReferralsClosed", fields: [closedById], references: [id], onDelete: SetNull)
+  cancelledAt         DateTime?
+  events              CareEvent[]
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@index([status])
+  @@index([patientId])
+  @@index([referredById, status])
+  @@index([navigatorId, status])
+}
+
+/** One entry on a test's or referral's timeline: a status change, a note, a contact with the patient, or an alert. */
+model CareEvent {
+  id         String          @id @default(cuid())
+  testId     String?
+  test       DiagnosticTest? @relation(fields: [testId], references: [id], onDelete: Cascade)
+  referralId String?
+  referral   Referral?       @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  actorId    String?
+  actor      User?           @relation("CareEventsLogged", fields: [actorId], references: [id], onDelete: SetNull)
+  /// STATUS, NOTE, CONTACT (a call or visit with the patient), SMS or ALERT.
+  kind       String
+  text       String
+  createdAt  DateTime        @default(now())
+
+  @@index([testId, createdAt])
+  @@index([referralId, createdAt])
 }
 
 model Notification {

@@ -9,6 +9,8 @@ import MedicalHistory from "@/components/records/MedicalHistory";
 import AppointmentTable from "@/components/appointments/AppointmentTable";
 import CallButton from "@/components/calls/CallButton";
 import { videoConfigured } from "@/lib/calls";
+import PatientFollowUps from "@/components/followups/PatientFollowUps";
+import NewFollowUpButtons from "@/components/followups/NewFollowUpButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -23,13 +25,15 @@ export default async function DoctorPatientDetailPage({ params }: { params: Prom
   ]);
   if (!patient || sharedAppointments === 0) notFound();
 
-  const [records, appointments] = await Promise.all([
+  const [records, appointments, doctors, navigators] = await Promise.all([
     patientRecords(id),
     prisma.appointment.findMany({
       where: { patientId: id, doctorId: doctor.id },
       orderBy: { startsAt: "desc" },
       include: { doctor: { select: { firstName: true, lastName: true } } },
     }),
+    prisma.user.findMany({ where: { role: Role.DOCTOR, isActive: true, id: { not: doctor.id } }, orderBy: { firstName: "asc" } }),
+    prisma.user.findMany({ where: { role: { in: [Role.NURSE, Role.RECEPTIONIST] }, isActive: true }, orderBy: { firstName: "asc" } }),
   ]);
 
   return (
@@ -48,6 +52,20 @@ export default async function DoctorPatientDetailPage({ params }: { params: Prom
 
       <h2 className="section-heading detail-section-heading">Medical History</h2>
       <MedicalHistory records={records} />
+
+      <PatientFollowUps
+        patientId={patient.id}
+        basePath="/doctor"
+        testWhere={{ orderedById: doctor.id }}
+        referralWhere={{ OR: [{ referredById: doctor.id }, { toDoctorId: doctor.id }] }}
+        actions={
+          <NewFollowUpButtons
+            patientId={patient.id}
+            doctors={doctors.map((d) => ({ id: d.id, name: `Dr. ${d.firstName} ${d.lastName}`, detail: d.specialty }))}
+            navigators={navigators.map((n) => ({ id: n.id, name: `${n.firstName} ${n.lastName}`, detail: n.role.toLowerCase() }))}
+          />
+        }
+      />
 
       <h2 className="section-heading detail-section-heading">Appointments with you</h2>
       <AppointmentTable appointments={appointments} linkBase="/doctor/appointments" />

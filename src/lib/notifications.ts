@@ -40,6 +40,23 @@ export async function notifyRoles(roles: Role[], n: NotificationInput, exceptUse
   );
 }
 
+/** Like `notifyUsers`, but sends each person the notification at most once per `key`. Returns how many were new. */
+export async function notifyUsersOnce(userIds: (string | null | undefined)[], n: NotificationInput, key: string): Promise<number> {
+  const ids = [...new Set(userIds.filter((id): id is string => !!id))];
+  if (ids.length === 0) return 0;
+  const users = await prisma.user.findMany({ where: { id: { in: ids }, isActive: true }, select: { id: true, role: true } });
+  const { count } = await prisma.notification.createMany({
+    data: users.map((u) => ({
+      ...n,
+      userId: u.id,
+      link: n.link?.split(PORTAL_TOKEN).join(PORTAL_BASE[u.role] ?? ""),
+      dedupeKey: `${key}:${u.id}`,
+    })),
+    skipDuplicates: true,
+  });
+  return count;
+}
+
 /**
  * Like `notifyRoles`, but sends each person the notification at most once per `key`.
  * Used for alerts that would otherwise repeat on every trigger, such as low stock.

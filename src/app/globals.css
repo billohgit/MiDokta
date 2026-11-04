@@ -1635,3 +1635,32 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
 }
 .segmented a { padding: 8px 18px; border-radius: 6px; font-size: 15px; font-weight: 500; color: #495057; text-decoration: none; }
 .segmented a.on { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+
+/* Follow-ups: tests and referrals */
+.status-neutral { background: #e9ecef; color: #495057; }
+.row-late td { background: #fffaf0; }
+.late-note { color: #b45309; font-size: 13px; font-weight: 600; margin-top: 4px; }
+.followup-facts { display: grid; grid-template-columns: max-content 1fr; gap: 10px 18px; margin: 4px 0 18px; font-size: 14px; }
+.followup-facts dt { color: var(--muted); font-weight: 500; }
+.followup-result { white-space: pre-wrap; }
+.loop-steps { list-style: none; padding: 0; margin: 0 0 18px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--muted); }
+.loop-steps li.done { color: var(--text); }
+.loop-steps li.done i { color: var(--brand-teal); }
+.navigator-pick { display: flex; align-items: flex-end; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.navigator-pick label { display: flex; flex-direction: column; gap: 4px; }
+.navigator-pick select { height: 34px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px; font: inherit; background: var(--card); }
+.care-timeline { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+.care-event { display: flex; gap: 12px; font-size: 14px; }
+.care-event > i { margin-top: 3px; color: var(--muted); width: 16px; text-align: center; }
+.care-status > i { color: var(--brand-teal); }
+.care-alert > i, .care-alert p { color: #b45309; }
+.care-event p { margin: 0 0 2px; white-space: pre-wrap; }
+.my-followups { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.my-followup { padding: 18px; display: flex; flex-direction: column; gap: 6px; }
+.my-followup h3 { font-size: 16px; font-weight: 700; }
+.my-followup h3 i { color: var(--brand-teal); margin-right: 4px; }
+.my-followup-note { white-space: pre-wrap; background: #f4f6f8; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+@media (max-width: 600px) {
+  .followup-facts { grid-template-columns: 1fr; gap: 2px; }
+  .followup-facts dd { margin-bottom: 8px; }
+}

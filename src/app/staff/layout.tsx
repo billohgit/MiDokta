@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 const DASHBOARD: NavItem = { href: "/staff/dashboard", label: "dashboard", icon: "fa-table-cells-large" };
 const PATIENTS: NavItem = { href: "/staff/patients", label: "patients", icon: "fa-bed-pulse" };
+const FOLLOW_UPS: NavItem = { href: "/staff/follow-ups", label: "followUps", icon: "fa-list-check" };
 const COMMON: NavItem[] = [
   { href: "/staff/chat", label: "chat", icon: "fa-comments" },
   { href: "/staff/settings", label: "settings", icon: "fa-gear" },
@@ -21,10 +22,11 @@ const NAV: Partial<Record<Role, NavItem[]>> = {
     DASHBOARD,
     { href: "/staff/appointments", label: "appointments", icon: "fa-calendar-plus" },
     PATIENTS,
+    FOLLOW_UPS,
     { href: "/staff/billing", label: "billing", icon: "fa-file-invoice-dollar" },
     ...COMMON,
   ],
-  [Role.NURSE]: [DASHBOARD, { href: "/staff/schedule", label: "schedule", icon: "fa-calendar-day" }, PATIENTS, ...COMMON],
+  [Role.NURSE]: [DASHBOARD, { href: "/staff/schedule", label: "schedule", icon: "fa-calendar-day" }, PATIENTS, FOLLOW_UPS, ...COMMON],
   [Role.PHARMACIST]: [
     DASHBOARD,
     { href: "/staff/prescriptions", label: "prescriptions", icon: "fa-pills" },

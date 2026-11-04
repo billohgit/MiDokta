@@ -11,6 +11,7 @@ const NAV: NavItem[] = [
   { href: "/doctor/dashboard", label: "dashboard", icon: "fa-table-cells-large" },
   { href: "/doctor/appointments", label: "appointments", icon: "fa-calendar-plus" },
   { href: "/doctor/patients", label: "patients", icon: "fa-bed-pulse" },
+  { href: "/doctor/follow-ups", label: "followUps", icon: "fa-list-check" },
   { href: "/doctor/calls", label: "videoCalls", icon: "fa-video" },
   { href: "/doctor/chat", label: "chat", icon: "fa-comments" },
   { href: "/doctor/settings", label: "settings", icon: "fa-gear" },

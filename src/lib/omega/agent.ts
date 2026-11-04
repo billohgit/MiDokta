@@ -181,6 +181,8 @@ export async function askOmega(history: OmegaTurn[], ctx: OmegaContext): Promise
 /** A message for the patient when Omega couldn't run at all. */
 export function describeOmegaError(e: unknown): string {
   if (e instanceof Anthropic.AuthenticationError) return "Omega isn't set up yet. Please try again later.";
+  // An account out of credit comes back as a plain 400; the API has no separate error type for it.
+  if (e instanceof Anthropic.BadRequestError && /credit balance/i.test(e.message)) return "Omega isn't set up yet. Please try again later.";
   if (e instanceof Anthropic.RateLimitError) return "Omega is busy right now. Please try again in a minute.";
   // A missing ANTHROPIC_API_KEY throws a plain Error before any request is made.
   if (!(e instanceof Anthropic.APIError) && e instanceof Error && /api key|apiKey|authentication/i.test(e.message)) {

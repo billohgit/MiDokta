@@ -2,6 +2,7 @@ import { Role } from "@prisma/client";
 import { requireUser } from "@/lib/auth";
 import { patientRecords } from "@/lib/records";
 import MedicalHistory from "@/components/records/MedicalHistory";
+import MyFollowUps from "@/components/followups/MyFollowUps";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +16,11 @@ export default async function PatientRecordsPage() {
       <div className="appt-header">
         <div>
           <h2 className="section-heading">My Records</h2>
-          <p className="section-sub">Your visits, diagnoses and prescriptions.</p>
+          <p className="section-sub">Your visits, diagnoses, prescriptions, tests and referrals.</p>
         </div>
       </div>
       <MedicalHistory records={records} emptyText="Your visit records will appear here after you see a doctor." />
+      <MyFollowUps patientId={patient.id} />
     </div>
   );
 }

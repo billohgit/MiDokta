@@ -9,6 +9,7 @@ import StatCard from "@/components/StatCard";
 import PatientSummary from "./PatientSummary";
 import PatientAdminActions from "./PatientAdminActions";
 import MedicalHistory from "@/components/records/MedicalHistory";
+import PatientFollowUps from "@/components/followups/PatientFollowUps";
 import AppointmentTable from "@/components/appointments/AppointmentTable";
 import { formatDate } from "@/components/appointments/shared";
 import { INVOICE_STATUS_CLASS, INVOICE_STATUS_LABEL } from "@/components/billing/shared";
@@ -20,10 +21,12 @@ type Props = {
   canManage?: boolean;
   /** Deleting a patient is admin-only. */
   canDelete?: boolean;
+  /** Tests and referrals, for the care team (not pharmacists). */
+  showFollowUps?: boolean;
 };
 
 /** One patient's full record, shared by the admin and staff portals. */
-export default async function PatientDetailPage({ id, basePath, canManage = false, canDelete = false }: Props) {
+export default async function PatientDetailPage({ id, basePath, canManage = false, canDelete = false, showFollowUps = true }: Props) {
   const patient = await prisma.user.findFirst({ where: { id, role: Role.PATIENT } });
   if (!patient) notFound();
 
@@ -91,6 +94,8 @@ export default async function PatientDetailPage({ id, basePath, canManage = fals
 
       <h2 className="section-heading detail-section-heading">Medical History</h2>
       <MedicalHistory records={records} />
+
+      {showFollowUps && <PatientFollowUps patientId={patient.id} basePath={basePath} />}
 
       <h2 className="section-heading detail-section-heading">Appointments</h2>
       <AppointmentTable appointments={appointments} />

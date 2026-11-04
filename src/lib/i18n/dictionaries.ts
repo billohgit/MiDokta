@@ -40,6 +40,7 @@ const en = {
     stock: "Stock",
     myPharmacy: "My Pharmacy",
     pharmacies: "Pharmacies",
+    followUps: "Follow-ups",
   },
   topbar: {
     toggleSidebar: "Toggle sidebar",
@@ -136,6 +137,7 @@ const fr: Dictionary = {
     stock: "Stock",
     myPharmacy: "Ma pharmacie",
     pharmacies: "Pharmacies",
+    followUps: "Suivis",
   },
   topbar: {
     toggleSidebar: "Afficher ou masquer le menu",
