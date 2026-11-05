@@ -93,6 +93,41 @@ const africasTalkingProvider = (): SmsProvider => ({
 });
 
 /**
+ * Infobip — https://www.infobip.com/docs/api/channels/sms/outbound-sms/send-message/send-sms-messages
+ *
+ * `INFOBIP_BASE_URL` is the account's own API host (e.g. `xxxxxx.api.infobip.com`, shown in the
+ * Infobip portal). With an alphanumeric `INFOBIP_SENDER` such as "MiDokta" messages are send-only.
+ */
+const infobipProvider = (): SmsProvider => ({
+  name: "infobip",
+  live: true,
+  twoWay: false,
+  async send(to, body) {
+    const apiKey = required("INFOBIP_API_KEY");
+    const host = required("INFOBIP_BASE_URL").replace(/^https?:\/\//, "").replace(/\/+$/, "");
+    const sender = process.env.INFOBIP_SENDER;
+
+    const res = await fetch(`https://${host}/sms/3/messages`, {
+      method: "POST",
+      headers: { Authorization: `App ${apiKey}`, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        // Infobip takes international numbers without the leading "+".
+        messages: [{ ...(sender ? { sender } : {}), destinations: [{ to: to.replace(/^\+/, "") }], content: { text: body } }],
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const reason = data.description ?? data.requestError?.serviceException?.text ?? res.statusText;
+      throw new Error(`Infobip ${res.status}: ${reason}`);
+    }
+    // Accepted means queued; a message the platform refuses outright comes back REJECTED.
+    const message = data.messages?.[0];
+    if (message?.status?.groupName === "REJECTED") throw new Error(`Infobip: ${message.status.description ?? message.status.name}`);
+    return { providerMessageId: message?.messageId };
+  },
+});
+
+/**
  * SMS Gateway for Android — https://docs.sms-gate.app
  *
  * An Android phone with a local SIM does the sending, so messages are ordinary person-to-person
@@ -131,7 +166,7 @@ const smsGateProvider = (): SmsProvider => ({
   },
 });
 
-/** The provider selected by SMS_PROVIDER (console | smsgate | twilio | africastalking). */
+/** The provider selected by SMS_PROVIDER (console | smsgate | twilio | africastalking | infobip). */
 export function getSmsProvider(): SmsProvider {
   switch ((process.env.SMS_PROVIDER ?? "console").toLowerCase()) {
     case "smsgate":
@@ -140,6 +175,8 @@ export function getSmsProvider(): SmsProvider {
       return twilioProvider();
     case "africastalking":
       return africasTalkingProvider();
+    case "infobip":
+      return infobipProvider();
     default:
       return consoleProvider;
   }
