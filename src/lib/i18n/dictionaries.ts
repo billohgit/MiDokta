@@ -41,6 +41,7 @@ const en = {
     myPharmacy: "My Pharmacy",
     pharmacies: "Pharmacies",
     followUps: "Follow-ups",
+    insights: "Insights",
   },
   topbar: {
     toggleSidebar: "Toggle sidebar",
@@ -138,6 +139,7 @@ const fr: Dictionary = {
     myPharmacy: "Ma pharmacie",
     pharmacies: "Pharmacies",
     followUps: "Suivis",
+    insights: "Statistiques",
   },
   topbar: {
     toggleSidebar: "Afficher ou masquer le menu",

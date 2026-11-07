@@ -13,6 +13,7 @@ const NAV: NavItem[] = [
   { href: "/admin/appointments", label: "appointments", icon: "fa-calendar-plus" },
   { href: "/admin/patients", label: "patients", icon: "fa-bed-pulse" },
   { href: "/admin/follow-ups", label: "followUps", icon: "fa-list-check" },
+  { href: "/admin/insights", label: "insights", icon: "fa-chart-simple" },
   { href: "/admin/doctors", label: "doctors", icon: "fa-user-doctor" },
   { href: "/admin/staff", label: "staff", icon: "fa-users" },
   { href: "/admin/verifications", label: "verification", icon: "fa-id-card" },
