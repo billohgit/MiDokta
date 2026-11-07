@@ -1,6 +1,7 @@
 import type { User } from "@prisma/client";
 import { chatContacts, listConversations } from "@/lib/chat";
 import { getSmsProvider } from "@/lib/sms/providers";
+import { attachmentStorage } from "@/lib/chat-attachments";
 import { PORTAL_ROLES } from "@/lib/roles";
 import ChatApp from "./ChatApp";
 
@@ -24,6 +25,7 @@ export default async function ChatPage({ user, conversationId }: { user: User; c
       initialConversations={conversations}
       initialConversationId={initial}
       smsLive={getSmsProvider().live}
+      attachments={attachmentStorage()}
     />
   );
 }

@@ -15,6 +15,11 @@ export type ChatUser = {
 /** Delivery of one chat message's SMS copies. */
 export type SmsSummary = { total: number; sent: number; pending: number; failed: number; skipped: number };
 
+export type AttachmentKind = "image" | "video";
+
+/** A photo or video sent in the chat. `url` is the app's own link, which checks the viewer is in the conversation. */
+export type ChatAttachment = { kind: AttachmentKind; url: string; name: string | null; size: number | null };
+
 export type ChatMessage = {
   id: string;
   conversationId: string;
@@ -23,9 +28,31 @@ export type ChatMessage = {
   createdAt: string;
   source: MessageSource;
   sms: SmsSummary | null;
+  attachment: ChatAttachment | null;
   /** Client-only: optimistic message still sending, or failed to send. */
   status?: "sending" | "failed";
+  /** Client-only, while sending: the chosen file, and its stored reference once uploaded. */
+  pendingFile?: File;
+  attachmentRef?: string;
 };
+
+/** The photos and videos that can be sent, by content type. */
+export const ATTACHMENT_TYPES: Record<string, AttachmentKind> = {
+  "image/jpeg": "image",
+  "image/png": "image",
+  "image/webp": "image",
+  "image/gif": "image",
+  "video/mp4": "video",
+  "video/webm": "video",
+  "video/quicktime": "video",
+  "video/3gpp": "video",
+};
+/** Photos are shrunk on the phone before sending, so their limit is rarely reached. */
+export const ATTACHMENT_MAX_BYTES: Record<AttachmentKind, number> = { image: 10 * 1024 * 1024, video: 50 * 1024 * 1024 };
+
+/** How a message reads in a one-line preview (the conversation list). */
+export const messagePreview = (m: { body: string; attachmentKind?: AttachmentKind | null }) =>
+  m.body || (m.attachmentKind === "video" ? "🎥 Video" : m.attachmentKind === "image" ? "📷 Photo" : "");
 
 export type ConversationSummary = {
   id: string;
@@ -33,7 +60,7 @@ export type ConversationSummary = {
   title: string | null;
   /** Everyone in the conversation, including the current user. */
   participants: ChatUser[];
-  lastMessage: { body: string; senderId: string; createdAt: string } | null;
+  lastMessage: { body: string; attachmentKind: AttachmentKind | null; senderId: string; createdAt: string } | null;
   lastMessageAt: string;
   unread: number;
 };

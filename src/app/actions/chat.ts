@@ -8,6 +8,7 @@ import { isUniqueViolation } from "@/lib/form";
 import { PORTAL_ROLES } from "@/lib/roles";
 import { queueSms } from "@/lib/sms";
 import { SMS_BRAND, gsmSafe } from "@/lib/sms/templates";
+import { checkAttachment, kindOf } from "@/lib/chat-attachments";
 import {
   type ChatMessage,
   MAX_MESSAGE_LENGTH,
@@ -25,12 +26,14 @@ const DENIED = fail("You are not allowed to do that.");
 /**
  * Posts a chat message. Participants who can't sign in (patients) always receive it
  * by SMS; everyone with a portal reads it in the app, and also gets an SMS when
- * `alsoSms` is true.
+ * `alsoSms` is true. A photo or video, already uploaded into the conversation's
+ * folder, comes as `attachment`; the SMS copy only says one was sent.
  */
 export async function sendMessage(
   conversationId: string,
   body: string,
-  alsoSms = true
+  alsoSms = true,
+  attachment?: { ref: string; name: string | null }
 ): Promise<Result<{ message: ChatMessage; smsQueued: number; smsSkipped: number }>> {
   const me = await authorize(...CHAT_ROLES);
   if (!me) return DENIED;
@@ -38,7 +41,7 @@ export async function sendMessage(
   if (me.role === Role.PATIENT) alsoSms = false;
 
   const text = String(body ?? "").trim();
-  if (!text) return fail("Message can't be empty.");
+  if (!text && !attachment) return fail("Message can't be empty.");
   if (text.length > MAX_MESSAGE_LENGTH) return fail(`Messages are limited to ${MAX_MESSAGE_LENGTH} characters.`);
 
   const conversation = await prisma.conversation.findUnique({
@@ -46,6 +49,10 @@ export async function sendMessage(
     include: { participants: { include: { user: { select: { id: true, role: true } } } } },
   });
   if (!conversation?.participants.some((p) => p.userId === me.id)) return DENIED;
+
+  const file = attachment ? await checkAttachment(conversationId, attachment.ref) : null;
+  if (attachment && !file) return fail("That photo or video couldn't be attached. Try sending it again.");
+  const kind = file ? kindOf(file.type) : null;
 
   const smsRecipients = conversation.participants
     .map((p) => p.user)
@@ -55,7 +62,16 @@ export async function sendMessage(
   }
 
   const message = await prisma.$transaction(async (tx) => {
-    const created = await tx.message.create({ data: { conversationId, senderId: me.id, body: text } });
+    const created = await tx.message.create({
+      data: {
+        conversationId,
+        senderId: me.id,
+        body: text,
+        ...(file
+          ? { attachmentRef: file.ref, attachmentType: file.type, attachmentSize: file.size, attachmentName: attachment?.name?.slice(0, 120) ?? null }
+          : {}),
+      },
+    });
     await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: created.createdAt } });
     await tx.conversationParticipant.update({
       where: { conversationId_userId: { conversationId, userId: me.id } },
@@ -70,7 +86,7 @@ export async function sendMessage(
     smsRecipients.map((u) => ({
       userId: u.id,
       category: "CHAT" as const,
-      body: gsmSafe(`${heading}: ${text}`),
+      body: gsmSafe(`${heading}: ${kind ? `[sent a ${kind === "video" ? "video" : "photo"}; open MiDokta to see it] ` : ""}${text}`.trim()),
       sentById: me.id,
       messageId: message.id,
     }))

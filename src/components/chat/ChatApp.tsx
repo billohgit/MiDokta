@@ -7,7 +7,10 @@ import Avatar from "@/components/appointments/Avatar";
 import NewChatModal from "./NewChatModal";
 import GroupInfoPanel from "./GroupInfoPanel";
 import CallButton from "@/components/calls/CallButton";
+import { shrinkUpload } from "@/components/ui/ImageCapture";
 import {
+  ATTACHMENT_MAX_BYTES,
+  ATTACHMENT_TYPES,
   type ChatMessage,
   type ChatUser,
   type ConversationSummary,
@@ -17,10 +20,15 @@ import {
   type SmsSummary,
   conversationTitle,
   displayName,
+  messagePreview,
 } from "./types";
 
 const LIST_POLL_MS = 5000;
 const THREAD_POLL_MS = 2500;
+/** Photos are shrunk to this many pixels on their longest side before sending, to save mobile data. */
+const PHOTO_SIDE = 1600;
+/** Videos above this size upload in parts, which survives a flaky connection better. */
+const MULTIPART_BYTES = 8 * 1024 * 1024;
 
 type Props = {
   me: ChatUser;
@@ -29,9 +37,11 @@ type Props = {
   initialConversationId: string | null;
   /** False when the SMS provider only logs messages (development). */
   smsLive: boolean;
+  /** Where photos and videos are uploaded: the private Blob store, or local disk in development. */
+  attachments: "blob" | "local";
 };
 
-export default function ChatApp({ me, contacts, initialConversations, initialConversationId, smsLive }: Props) {
+export default function ChatApp({ me, contacts, initialConversations, initialConversationId, smsLive, attachments }: Props) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -121,6 +131,7 @@ export default function ChatApp({ me, contacts, initialConversations, initialCon
             conversation={active}
             me={me}
             smsLive={smsLive}
+            attachments={attachments}
             onBack={() => open(null)}
             onToggleInfo={() => setShowInfo((s) => !s)}
             onActivity={refreshConversations}
@@ -177,7 +188,7 @@ function ConversationRow({ c, me, active, onClick }: { c: ConversationSummary; m
   const other = c.participants.find((p) => p.id !== me.id);
   const title = conversationTitle(c, me.id);
   const preview = c.lastMessage
-    ? `${c.lastMessage.senderId === me.id ? "You: " : c.isGroup ? `${senderFirstName(c, c.lastMessage.senderId)}: ` : ""}${c.lastMessage.body}`
+    ? `${c.lastMessage.senderId === me.id ? "You: " : c.isGroup ? `${senderFirstName(c, c.lastMessage.senderId)}: ` : ""}${messagePreview(c.lastMessage)}`
     : c.isGroup
       ? `${c.participants.length} members`
       : "No messages yet";
@@ -212,6 +223,7 @@ type ThreadProps = {
   conversation: ConversationSummary;
   me: ChatUser;
   smsLive: boolean;
+  attachments: "blob" | "local";
   onBack: () => void;
   onToggleInfo: () => void;
   onActivity: () => void;
@@ -220,7 +232,7 @@ type ThreadProps = {
   basePath: string;
 };
 
-function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, onRead, basePath }: ThreadProps) {
+function Thread({ conversation, me, smsLive, attachments, onBack, onToggleInfo, onActivity, onRead, basePath }: ThreadProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
@@ -230,6 +242,11 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
   const [notice, setNotice] = useState<string | null>(null);
   // Patients' messages are never texted (the server enforces it too).
   const [alsoSms, setAlsoSms] = useState(me.role !== "PATIENT");
+  // A photo or video chosen to send, and the upload in progress (message id, percent).
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState<{ id: string; percent: number } | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const filePreview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
 
   const scroller = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
@@ -357,10 +374,51 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
     setLoadingOlder(false);
   };
 
+  /** Puts the chosen file in storage and returns its reference. */
+  const uploadFile = async (id: string, f: File): Promise<string> => {
+    setUploading({ id, percent: 0 });
+    try {
+      if (attachments === "local") {
+        const form = new FormData();
+        form.set("conversationId", conversation.id);
+        form.set("file", f);
+        const res = await fetch("/api/chat/attachments/local", { method: "POST", body: form });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ref) throw new Error(data.error ?? "Upload failed.");
+        return data.ref as string;
+      }
+      const { upload } = await import("@vercel/blob/client");
+      const safeName = f.name.replace(/[^\w.-]+/g, "_").slice(-60) || "file";
+      const blob = await upload(`chat/${conversation.id}/${safeName}`, f, {
+        access: "private",
+        handleUploadUrl: "/api/chat/attachments/upload",
+        clientPayload: conversation.id,
+        contentType: f.type,
+        multipart: f.size > MULTIPART_BYTES,
+        onUploadProgress: ({ percentage }) => setUploading({ id, percent: Math.round(percentage) }),
+      });
+      return `blob:${blob.pathname}`;
+    } finally {
+      setUploading(null);
+    }
+  };
+
   const deliver = async (temp: ChatMessage) => {
+    let ref = temp.attachmentRef;
+    if (temp.pendingFile && !ref) {
+      try {
+        ref = await uploadFile(temp.id, temp.pendingFile);
+        setMessages((list) => list.map((m) => (m.id === temp.id ? { ...m, attachmentRef: ref } : m)));
+      } catch (e) {
+        setMessages((list) => list.map((m) => (m.id === temp.id ? { ...m, status: "failed" as const } : m)));
+        setError(e instanceof Error && e.message ? `Couldn't upload: ${e.message}` : "Couldn't upload. Check your connection and tap retry.");
+        return;
+      }
+    }
+    const attachment = ref ? { ref, name: temp.pendingFile?.name ?? null } : undefined;
     // A dropped connection rejects rather than returning a result; treat it as a failed send so the
     // bubble offers a retry instead of staying on "sending".
-    const result = await sendMessage(conversation.id, temp.body, alsoSms).catch(() => ({
+    const result = await sendMessage(conversation.id, temp.body, alsoSms, attachment).catch(() => ({
       ok: false as const,
       error: "Couldn't send. Check your connection and tap retry.",
     }));
@@ -384,9 +442,30 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
     }
   };
 
+  /** Checks a chosen photo or video, shrinking photos first. */
+  const choose = async (f: File | undefined) => {
+    if (fileInput.current) fileInput.current.value = "";
+    if (!f) return;
+    const kind = ATTACHMENT_TYPES[f.type] ?? (f.type.startsWith("image/") ? "image" : null);
+    if (!kind) return setError("Send a photo (JPG, PNG, WebP, GIF) or a video (MP4, WebM, MOV, 3GP).");
+    let chosen = f;
+    if (kind === "image" && f.type !== "image/gif") {
+      try {
+        chosen = await shrinkUpload(f, f.name.replace(/\.\w+$/, "") + ".jpg", PHOTO_SIDE);
+      } catch {
+        return setError("That photo couldn't be read. Try a JPG or PNG.");
+      }
+    }
+    if (chosen.size > ATTACHMENT_MAX_BYTES[kind]) {
+      return setError(`${kind === "video" ? "Videos" : "Photos"} can be up to ${ATTACHMENT_MAX_BYTES[kind] / 1024 / 1024} MB. Try a shorter video.`);
+    }
+    setError(null);
+    setFile(chosen);
+  };
+
   const send = () => {
     const body = draft.trim();
-    if (!body) return;
+    if (!body && !file) return;
     if (body.length > limit) {
       setError(`Messages ${willSms ? "sent by SMS " : ""}are limited to ${limit} characters.`);
       return;
@@ -399,11 +478,14 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
       createdAt: new Date().toISOString(),
       source: "APP",
       sms: null,
+      attachment: file && filePreview ? { kind: ATTACHMENT_TYPES[file.type] ?? "image", url: filePreview, name: file.name, size: file.size } : null,
+      pendingFile: file ?? undefined,
       status: "sending",
     };
     stickToBottom.current = true;
     setMessages((list) => [...list, temp]);
     setDraft("");
+    setFile(null);
     deliver(temp);
   };
 
@@ -476,7 +558,8 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
                       {conversation.isGroup && !mine && firstInRun && (
                         <span className="bubble-sender">{sender ? displayName(sender) : "Former member"}</span>
                       )}
-                      <span className="bubble-body">{m.body}</span>
+                      {m.attachment && <Attachment attachment={m.attachment} />}
+                      {m.body && <span className="bubble-body">{m.body}</span>}
                       <span className="bubble-meta">
                         {m.source === "SMS" && (
                           <span className="bubble-sms" title="Received by SMS">
@@ -484,7 +567,11 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
                           </span>
                         )}
                         {m.status === "sending" ? (
-                          <i className="fa-regular fa-clock" aria-label="Sending" />
+                          uploading?.id === m.id ? (
+                            <span>Uploading {uploading.percent}%</span>
+                          ) : (
+                            <i className="fa-regular fa-clock" aria-label="Sending" />
+                          )
                         ) : m.status === "failed" ? (
                           <button className="bubble-retry" onClick={() => retry(m)}>
                             <i className="fa-solid fa-rotate-right" /> Retry
@@ -535,6 +622,35 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
             </span>
           )}
         </div>
+        {file && filePreview && (
+          <div className="composer-attachment">
+            {ATTACHMENT_TYPES[file.type] === "video" ? (
+              <video src={filePreview} muted playsInline />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={filePreview} alt="" />
+            )}
+            <span>
+              {file.name}
+              <small>
+                {(file.size / 1024 / 1024).toFixed(1)} MB{willSms ? " · SMS recipients are told to open MiDokta to see it" : ""}
+              </small>
+            </span>
+            <button type="button" className="icon-btn" onClick={() => setFile(null)} aria-label="Remove attachment">
+              <i className="fa-solid fa-xmark" />
+            </button>
+          </div>
+        )}
+        <button
+          type="button"
+          className="icon-btn composer-attach"
+          onClick={() => fileInput.current?.click()}
+          aria-label="Attach a photo or video"
+          title="Attach a photo or video"
+        >
+          <i className="fa-solid fa-paperclip" />
+        </button>
+        <input ref={fileInput} type="file" accept="image/*,video/*" hidden onChange={(e) => choose(e.target.files?.[0])} />
         <textarea
           ref={inputRef}
           value={draft}
@@ -547,14 +663,27 @@ function Thread({ conversation, me, smsLive, onBack, onToggleInfo, onActivity, o
           }}
           rows={1}
           maxLength={MAX_MESSAGE_LENGTH}
-          placeholder="Type a message... (Enter to send, Shift+Enter for a new line)"
+          placeholder={file ? "Add a caption (optional)" : "Type a message... (Enter to send, Shift+Enter for a new line)"}
           aria-label="Message"
         />
-        <button type="submit" className="btn btn-primary composer-send" disabled={!draft.trim()} aria-label="Send">
+        <button type="submit" className="btn btn-primary composer-send" disabled={!draft.trim() && !file} aria-label="Send">
           <i className="fa-solid fa-paper-plane" />
         </button>
       </form>
     </>
+  );
+}
+
+/** A photo (tap to open full size) or a video, inside a message bubble. */
+function Attachment({ attachment: a }: { attachment: NonNullable<ChatMessage["attachment"]> }) {
+  if (a.kind === "video") {
+    return <video className="bubble-media" src={a.url} controls preload="metadata" playsInline />;
+  }
+  return (
+    <a href={a.url} target="_blank" rel="noreferrer" className="bubble-media-link">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="bubble-media" src={a.url} alt={a.name ?? "Photo"} loading="lazy" />
+    </a>
   );
 }
 

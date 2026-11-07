@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/sms/phone";
 import { PORTAL_ROLES } from "@/lib/roles";
 import {
+  ATTACHMENT_TYPES,
   type ChatMessage,
   type ChatUser,
   type ConversationSummary,
@@ -115,7 +116,9 @@ export async function listConversations(userId: string): Promise<ConversationSum
       isGroup: c.isGroup,
       title: c.title,
       participants: c.participants.map((p) => toChatUser(p.user)),
-      lastMessage: last ? { body: last.body, senderId: last.senderId, createdAt: last.createdAt.toISOString() } : null,
+      lastMessage: last
+        ? { body: last.body, attachmentKind: attachmentKind(last.attachmentType), senderId: last.senderId, createdAt: last.createdAt.toISOString() }
+        : null,
       lastMessageAt: c.lastMessageAt.toISOString(),
       unread: unread.get(c.id) ?? 0,
     };
@@ -155,17 +158,34 @@ export async function smsSummaries(messageIds: string[]) {
   return summaries;
 }
 
-type MessageRow = { id: string; conversationId: string; senderId: string; body: string; createdAt: Date; source: ChatMessage["source"] };
+type MessageRow = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  body: string;
+  createdAt: Date;
+  source: ChatMessage["source"];
+  attachmentType: string | null;
+  attachmentName: string | null;
+  attachmentSize: number | null;
+};
 
-export const toChatMessage = (m: MessageRow, sms: SmsSummary | null = null): ChatMessage => ({
-  id: m.id,
-  conversationId: m.conversationId,
-  senderId: m.senderId,
-  body: m.body,
-  createdAt: m.createdAt.toISOString(),
-  source: m.source,
-  sms,
-});
+const attachmentKind = (type: string | null) => (type ? (ATTACHMENT_TYPES[type] ?? null) : null);
+
+export const toChatMessage = (m: MessageRow, sms: SmsSummary | null = null): ChatMessage => {
+  const kind = attachmentKind(m.attachmentType);
+  return {
+    id: m.id,
+    conversationId: m.conversationId,
+    senderId: m.senderId,
+    body: m.body,
+    createdAt: m.createdAt.toISOString(),
+    source: m.source,
+    sms,
+    // The file is served by the app, which checks the viewer is in the conversation.
+    attachment: kind ? { kind, url: `/api/chat/attachments/${m.id}`, name: m.attachmentName, size: m.attachmentSize } : null,
+  };
+};
 
 /** Chat messages with their SMS delivery summaries. */
 export async function withSms(messages: MessageRow[]) {

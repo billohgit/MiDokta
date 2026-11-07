@@ -877,7 +877,14 @@ model Message {
   conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId       String
   sender         User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  /// The text; may be empty when the message is just an attachment.
   body           String
+  /// A photo or video sent with the message: "blob:<pathname>" in the private Blob store, or
+  /// "local:<path>" under uploads/ in development. Only ever served to the conversation's members.
+  attachmentRef  String?
+  attachmentType String?
+  attachmentName String?
+  attachmentSize Int?
   /// APP for messages typed in the chat, SMS for replies received by text message.
   source         MessageSource @default(APP)
   smsMessages    SmsMessage[]
