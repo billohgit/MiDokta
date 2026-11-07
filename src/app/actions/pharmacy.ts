@@ -29,7 +29,13 @@ const money = (formData: FormData, key: string) => {
  * Adds a product to the patient's cart (or sets its quantity). A cart holds one pharmacy's products:
  * adding from another returns `otherPharmacy`, and calling again with `replaceCart` empties it first.
  */
-export async function addToCart(productId: string, quantity: number, replaceCart = false): Promise<ActionResult & { otherPharmacy?: string }> {
+export async function addToCart(
+  productId: string,
+  quantity: number,
+  replaceCart = false,
+  /** The prescription scan the product was picked from; its photo goes with the order. */
+  scanId?: string,
+): Promise<ActionResult & { otherPharmacy?: string }> {
   const me = await authorize(Role.PATIENT);
   if (!me) return DENIED;
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_IN_CART) return fail(`Choose a quantity from 1 to ${MAX_IN_CART}.`);
@@ -44,10 +50,11 @@ export async function addToCart(productId: string, quantity: number, replaceCart
   const existing = await prisma.cartItem.findUnique({ where: { userId_productId: { userId: me.id, productId } } });
   const wanted = Math.min((existing?.quantity ?? 0) + quantity, MAX_IN_CART);
   if (wanted > product.quantity) return fail(product.quantity === 0 ? "Sold out." : `Only ${product.quantity} left.`);
+  const prescriptionScanId = scanId && (await prisma.prescriptionScan.count({ where: { id: scanId, userId: me.id } })) ? scanId : undefined;
   await prisma.cartItem.upsert({
     where: { userId_productId: { userId: me.id, productId } },
-    create: { userId: me.id, productId, quantity: wanted },
-    update: { quantity: wanted },
+    create: { userId: me.id, productId, quantity: wanted, prescriptionScanId },
+    update: { quantity: wanted, ...(prescriptionScanId ? { prescriptionScanId } : {}) },
   });
   refresh();
   return { ok: true };

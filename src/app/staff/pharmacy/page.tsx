@@ -8,10 +8,11 @@ import { PLATFORM_FEE_RATE } from "@/lib/payouts";
 import PharmacySettingsForm from "@/components/pharmacy/PharmacySettingsForm";
 import ProductsManager from "@/components/pharmacy/ProductsManager";
 import PharmacyOrdersView from "@/components/pharmacy/PharmacyOrdersView";
+import PrescriptionScanner from "@/components/pharmacy/PrescriptionScanner";
 
 export const dynamic = "force-dynamic";
 
-const TABS = { orders: "Orders", products: "Products", settings: "Pharmacy & Payouts" } as const;
+const TABS = { orders: "Orders", products: "Products", scan: "Scan prescription", settings: "Pharmacy & Payouts" } as const;
 type Tab = keyof typeof TABS;
 
 /** A pharmacist's own shop: orders to fill, products to sell, and their details. */
@@ -130,6 +131,7 @@ export default async function MyPharmacyPage({ searchParams }: { searchParams: P
           }))}
         />
       )}
+      {tab === "scan" && <PrescriptionScanner mode="pharmacist" />}
       {tab === "settings" && <PharmacySettingsForm pharmacy={settings} platformPercent={platformPercent} />}
     </div>
   );

@@ -91,6 +91,8 @@ export async function placeOrder(c: Checkout): Promise<{ invoiceId: string } | {
         pharmacyShare: total.minus(platformFee),
         refundWallet: c.refundWallet,
         refundAccount: c.refundAccount,
+        // A prescription photo the patient scanned goes with the order, for the pharmacy to check.
+        prescriptionScanId: cart.find((i) => i.prescriptionScanId)?.prescriptionScanId ?? null,
         items: { create: cart.map((i) => ({ productId: i.productId, name: describeProduct(i.product), unitPrice: i.product.price, quantity: i.quantity })) },
       },
     });
@@ -313,6 +315,7 @@ export const toOrderRow = (o: RowOrder): OrderRow => ({
   total: formatMoney(o.total.toString()),
   share: formatMoney(o.pharmacyShare.toString()),
   note: o.note,
+  prescriptionUrl: o.prescriptionScanId ? `/api/prescription-scans/${o.prescriptionScanId}` : null,
   lines: [
     ...o.items.map((i) => ({ name: i.name, quantity: i.quantity, amount: formatMoney(i.unitPrice.times(i.quantity).toString()) })),
     ...(o.deliveryFee.isPositive() ? [{ name: "Delivery", quantity: 1, amount: formatMoney(o.deliveryFee.toString()) }] : []),

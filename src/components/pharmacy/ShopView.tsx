@@ -44,6 +44,9 @@ export default function ShopView({ products, cartCount, cartPharmacy }: Props) {
           <p className="section-sub">Order medicines from local pharmacies, delivered or ready to collect.</p>
         </div>
         <div className="appt-header-actions">
+          <Link href="/patient/pharmacy/scan" className="btn btn-outline btn-lg">
+            <i className="fa-solid fa-file-prescription btn-icon" /> Scan prescription
+          </Link>
           <Link href="/patient/pharmacy/orders" className="btn btn-outline btn-lg">
             <i className="fa-solid fa-receipt btn-icon" /> My Orders
           </Link>

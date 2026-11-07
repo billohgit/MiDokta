@@ -58,6 +58,15 @@ export default function PharmacyOrdersView({ orders, as, empty }: Props) {
               )}{" "}
               · {as === "pharmacy" ? `you receive ${o.share}` : `pharmacy share ${o.share}`}
             </p>
+            {o.prescriptionUrl && (
+              <p className="form-note">
+                <i className="fa-solid fa-file-prescription" />{" "}
+                <a href={o.prescriptionUrl} target="_blank" rel="noreferrer" className="table-link">
+                  Prescription photo
+                </a>{" "}
+                · the patient ordered from an AI reading of it: check the medicines against the photo before sending.
+              </p>
+            )}
             {o.note && <p className="pay-status">{o.status === "DISPUTED" ? `Patient reports: "${o.note}"` : o.note}</p>}
 
             <div className="row-actions">

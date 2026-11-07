@@ -54,5 +54,7 @@ export type OrderRow = {
   total: string;
   share: string;
   note: string | null;
+  /** The prescription photo the patient ordered from, if any. */
+  prescriptionUrl: string | null;
   lines: OrderLine[];
 };

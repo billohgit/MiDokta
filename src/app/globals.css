@@ -1677,3 +1677,46 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
 @media (max-width: 600px) {
   .bubble-media { width: 240px; }
 }
+
+/* Prescription scanner */
+.scanner { display: flex; flex-direction: column; gap: 14px; max-width: 760px; }
+.scan-preview { display: block; max-width: 100%; max-height: 420px; border-radius: 10px; margin: 10px 0 14px; background: #f4f6f8; }
+.scan-thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+.scan-warnings { list-style: none; padding: 10px 12px; margin: 0 0 14px; background: #fff7e6; border-radius: 8px; font-size: 14px; color: #8a5300; display: flex; flex-direction: column; gap: 4px; }
+.scan-medicines { list-style: none; padding: 0; margin: 0 0 14px; display: flex; flex-direction: column; gap: 14px; }
+.scan-medicine { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.scan-medicine-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.scan-note { font-size: 13px; color: #8a5300; }
+.scan-matches { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.scan-matches li { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.scan-matches .status-pill { margin-left: 6px; }
+
+/* Insights: ranked bar charts. One series per chart, so one hue; text stays in text colors. */
+.insight-hero { padding: 22px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 24px 48px; margin-bottom: 18px; }
+.insight-hero-number { display: block; font-size: 52px; font-weight: 700; line-height: 1; letter-spacing: -1px; }
+.insight-hero-label { color: var(--muted); font-size: 14px; }
+.insight-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 32px; flex: 1; margin: 0; }
+.insight-stats dt { color: var(--muted); font-size: 13px; }
+.insight-stats dd { margin: 2px 0 0; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; margin-bottom: 14px; }
+.insight-card { padding: 18px 20px; }
+.insight-title { font-size: 17px; font-weight: 700; }
+.insight-empty { color: var(--muted); font-size: 14px; padding: 24px 0; }
+.bar-list { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-direction: column; gap: 2px; }
+.bar-row { position: relative; display: grid; grid-template-columns: 22px minmax(90px, 38%) 1fr; align-items: center; gap: 10px; padding: 5px 4px; border-radius: 6px; font-size: 14px; }
+.bar-row:hover, .bar-row:focus-visible { background: #f1f3f5; outline: none; }
+.bar-rank { color: var(--muted); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+.bar-label { overflow-wrap: anywhere; line-height: 1.3; }
+.bar-track { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bar-fill { display: block; flex: none; height: 16px; min-width: 2px; background: #0f9c89; border-radius: 0 4px 4px 0; }
+.bar-value { color: var(--text); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bar-row:hover::after, .bar-row:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute; left: 32px; bottom: calc(100% + 4px); z-index: 5; max-width: min(360px, 90%);
+  padding: 6px 10px; border-radius: 8px; background: #212529; color: #fff; font-size: 12px; line-height: 1.4; pointer-events: none;
+}
+@media (max-width: 600px) {
+  .insight-grid { grid-template-columns: 1fr; }
+  .insight-hero-number { font-size: 44px; }
+  .bar-row { grid-template-columns: 18px minmax(80px, 42%) 1fr; }
+}

@@ -267,6 +267,7 @@ model User {
   referralsNavigated  Referral[]                @relation("ReferralsNavigated")
   referralsClosed     Referral[]                @relation("ReferralsClosed")
   careEvents          CareEvent[]               @relation("CareEventsLogged")
+  prescriptionScans   PrescriptionScan[]
 
   @@index([role])
 }
@@ -609,6 +610,26 @@ model PharmacyProduct {
   @@index([isActive, name])
 }
 
+/**
+ * A photo of a (usually handwritten) prescription and the AI's reading of it. Taken by a patient in
+ * the shop or a pharmacist at the counter. The reading is a suggestion that a person checks against
+ * the photo; the photo travels with any order made from it so the pharmacy can check it too.
+ */
+model PrescriptionScan {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The photo, in the private store ("blob:<pathname>") or on local disk in development ("local:<path>").
+  imageRef  String
+  /// The AI's reading: medicines with strength, dose, frequency, duration and confidence, plus warnings.
+  result    Json
+  cartItems CartItem[]
+  orders    PharmacyOrder[]
+  createdAt DateTime        @default(now())
+
+  @@index([userId, createdAt])
+}
+
 /** A patient's shopping cart: one row per product, all from one pharmacy. */
 model CartItem {
   id        String          @id @default(cuid())
@@ -617,6 +638,9 @@ model CartItem {
   productId String
   product   PharmacyProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity  Int
+  /// The prescription scan this was added from, if any; it goes with the order.
+  prescriptionScanId String?
+  prescriptionScan   PrescriptionScan? @relation(fields: [prescriptionScanId], references: [id], onDelete: SetNull)
   createdAt DateTime        @default(now())
 
   @@unique([userId, productId])
@@ -655,6 +679,9 @@ model PharmacyOrder {
   cancelledAt     DateTime?
   /// Why it was cancelled, or what the patient reported when disputing it.
   note            String?
+  /// The prescription photo the order was made from, for the pharmacy to check.
+  prescriptionScanId String?
+  prescriptionScan   PrescriptionScan? @relation(fields: [prescriptionScanId], references: [id], onDelete: SetNull)
   items           PharmacyOrderItem[]
   payouts         Payout[]
   createdAt       DateTime            @default(now())
