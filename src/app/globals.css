@@ -1720,3 +1720,6 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
   .insight-hero-number { font-size: 44px; }
   .bar-row { grid-template-columns: 18px minmax(80px, 42%) 1fr; }
 }
+
+.forgot-link { align-self: flex-end; margin-top: -6px; font-size: 14px; font-weight: 600; color: var(--primary); }
+.forgot-link:hover { text-decoration: underline; }

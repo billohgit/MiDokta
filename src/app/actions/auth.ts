@@ -15,6 +15,7 @@ import { COUNTRIES, withCountryCode } from "@/lib/countries";
 import { notifyRoles } from "@/lib/notifications";
 import { SIGNUP_ROLES } from "@/lib/roles";
 import { checkLoginCode, redeemLoginCode, sendLoginCode } from "@/lib/login-codes";
+import { findAccount, resetPassword, sendResetCode } from "@/lib/password-reset";
 
 export type LoginMethod = "email" | "phone";
 export type LoginState = { error: string | null; method: LoginMethod; identifier: string; country: string };
@@ -138,6 +139,64 @@ async function signInPatient(codeId: string, userId: string, fail: (e: string, p
 export async function logout() {
   await destroySession();
   redirect("/login");
+}
+
+export type ResetState = {
+  step: "request" | "reset";
+  error: string | null;
+  notice: string | null;
+  method: LoginMethod;
+  identifier: string;
+  country: string;
+};
+
+/**
+ * Forgot password, one step per submit: text a code to the account's phone, then check the code and
+ * set the new password (signing in, and out everywhere else). Never says whether the account exists.
+ */
+export async function passwordReset(prev: ResetState, formData: FormData): Promise<ResetState> {
+  const intent = String(formData.get("intent") ?? "");
+  const method: LoginMethod = formData.get("method") === "phone" ? "phone" : "email";
+  const identifier = String(formData.get("identifier") ?? "").trim();
+  const country = String(formData.get("country") ?? prev.country);
+  const state = { ...prev, method, identifier, country, error: null, notice: null };
+
+  let account: { email: string } | { phone: string };
+  if (method === "email") {
+    if (!isEmail(identifier)) return { ...state, step: "request", error: "Enter the email address on your account." };
+    account = { email: identifier };
+  } else {
+    const code = COUNTRIES.find((c) => c.iso === country)?.code;
+    const phone = code && normalizePhone(withCountryCode(code, identifier));
+    if (!phone) return { ...state, step: "request", error: "Enter a valid phone number for the selected country." };
+    account = { phone };
+  }
+  const user = await findAccount(account);
+
+  if (intent === "send" || intent === "resend") {
+    const sent = await sendResetCode(user);
+    if (!sent.ok) return { ...state, error: sent.error };
+    return {
+      ...state,
+      step: "reset",
+      notice:
+        "If an account matches and has a phone number, we've texted it a 6-digit code. No text after a few minutes? Check the number, or ask an administrator to reset your password.",
+    };
+  }
+
+  const code = String(formData.get("code") ?? "");
+  const password = String(formData.get("password") ?? "");
+  if (!/^\d{6}$/.test(code.replace(/\D/g, ""))) return { ...state, step: "reset", error: "Enter the 6-digit code from the text." };
+  if (password.length < MIN_PASSWORD_LENGTH) return { ...state, step: "reset", error: `Use at least ${MIN_PASSWORD_LENGTH} characters for your new password.` };
+  if (password !== String(formData.get("confirm") ?? "")) return { ...state, step: "reset", error: "The two passwords don't match." };
+
+  const result = await resetPassword(user, code, password);
+  if (!result.ok) return { ...state, step: "reset", error: result.error };
+
+  const home = PORTAL_HOME[result.user.role];
+  if (!home) return { ...state, step: "reset", notice: "Your password is changed. You can now sign in.", error: null };
+  await createSession(result.user.id);
+  redirect(home);
 }
 
 export type SignupState = {

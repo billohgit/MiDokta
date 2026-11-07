@@ -61,6 +61,9 @@ export default function LoginForm({ defaultCountry }: { defaultCountry: string }
           <span>{d.login.password}</span>
           <input type="password" name="password" autoComplete="current-password" required />
         </label>
+        <Link href="/reset-password" className="forgot-link">
+          {d.login.forgotPassword}
+        </Link>
         {state.error && <p className="form-error">{state.error}</p>}
         <button type="submit" className="btn btn-primary" disabled={pending}>
           {pending ? d.login.signingIn : d.login.signIn}

@@ -63,6 +63,7 @@ const en = {
     signIn: "Sign In",
     signingIn: "Signing in...",
     noAccount: "Don't have an account?",
+    forgotPassword: "Forgot password?",
     createOne: "Create one",
     noPasswordYet: "No password yet? Sign in with your phone, then set one in Settings.",
     sharedNumber: "This number is shared by more than one patient. Who is signing in?",
@@ -161,6 +162,7 @@ const fr: Dictionary = {
     signIn: "Se connecter",
     signingIn: "Connexion...",
     noAccount: "Vous n'avez pas de compte ?",
+    forgotPassword: "Mot de passe oublié ?",
     createOne: "Créez-en un",
     noPasswordYet:
       "Pas encore de mot de passe ? Connectez-vous avec votre téléphone, puis définissez-en un dans les Paramètres.",

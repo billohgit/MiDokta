@@ -60,7 +60,10 @@ export const getSessionUser = cache(async (): Promise<User | null> => {
   const claims = await sessionClaims();
   if (!claims) return null;
   const user = await prisma.user.findUnique({ where: { id: claims.sub } });
-  return user?.isActive ? user : null;
+  if (!user?.isActive) return null;
+  // A password reset signs out every session from before it (tokens carry whole seconds).
+  if (user.passwordChangedAt && (claims.iat ?? 0) < Math.floor(user.passwordChangedAt.getTime() / 1000)) return null;
+  return user;
 });
 
 const RECENT_SIGN_IN_MS = 15 * 60 * 1000;

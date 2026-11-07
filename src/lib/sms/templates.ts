@@ -65,6 +65,9 @@ const templates = {
   loginCode: (code: string) =>
     `${SMS_BRAND}: ${code} is your sign-in code. It expires in 10 minutes. Never share it with anyone.`,
 
+  passwordResetCode: (code: string) =>
+    `${SMS_BRAND}: ${code} is your code to reset your password. It expires in 10 minutes. If you didn't ask for this, ignore this text.`,
+
   followUpReminder: (p: Person, date: Date, doctor?: Person | null) =>
     `${SMS_BRAND}: Hi ${p.firstName}, your follow-up with ${drName(doctor)} is due on ${smsDate(date)}. Please contact us to book a visit.`,
 

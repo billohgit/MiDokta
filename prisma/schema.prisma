@@ -229,6 +229,8 @@ model User {
   verificationReport    Json?
   verificationCheckedAt DateTime?
   password              String
+  /// Sessions signed in before this are no longer valid (set when the password is reset).
+  passwordChangedAt     DateTime?
   role                  Role
   hospitalId            String?
   hospital              Hospital?           @relation(fields: [hospitalId], references: [id])
@@ -268,6 +270,7 @@ model User {
   referralsClosed     Referral[]                @relation("ReferralsClosed")
   careEvents          CareEvent[]               @relation("CareEventsLogged")
   prescriptionScans   PrescriptionScan[]
+  passwordResets      PasswordResetCode[]
 
   @@index([role])
 }
@@ -978,6 +981,20 @@ model Call {
 }
 
 /// A one-time code texted to a patient's phone to sign in (src/lib/login-codes.ts).
+/** A one-time code texted to an account's phone to reset a forgotten password. Stored hashed. */
+model PasswordResetCode {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
 model LoginCode {
   id         String    @id @default(cuid())
   /// Normalised E.164 number the code was sent to.
