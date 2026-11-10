@@ -1750,3 +1750,50 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
 .invite-list { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 10px; }
 .invite-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; flex-wrap: wrap; }
 .invite-list-actions { display: flex; align-items: center; gap: 8px; }
+
+/* ---------- Phones and tablets ---------- */
+/* The country picker's real <select> sits invisibly over its label everywhere, so long country names never widen the field. */
+.country-select select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; padding: 0; }
+.login-page { grid-template-columns: minmax(0, 1fr); }
+.login-card { justify-self: center; }
+/* Filter tabs scroll sideways instead of running off the screen. */
+.segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.segmented::-webkit-scrollbar { display: none; }
+.segmented button, .segmented a { white-space: nowrap; flex: none; }
+img, video { max-width: 100%; }
+
+@media (max-width: 992px) {
+  /* The closed drawer shouldn't cast a shadow onto the page edge. */
+  .sidebar { box-shadow: none; }
+  .layout.mobile-open .sidebar { box-shadow: 4px 0 20px rgba(0, 0, 0, 0.08); }
+}
+
+@media (max-width: 600px) {
+  /* Top bar: menu first, title shrinks with an ellipsis, icons tighter. */
+  .topbar { padding: 8px 10px; gap: 8px; top: 8px; margin-bottom: 16px; }
+  .topbar-left { gap: 6px; flex: 1; min-width: 0; }
+  .topbar-left .icon-btn { order: -1; flex: none; }
+  .topbar-crumb { display: none; }
+  .page-title { font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .topbar-right { gap: 2px; flex: none; }
+  .topbar .icon-btn { width: 36px; height: 36px; font-size: 18px; }
+  .topbar .lang-btn { width: 36px; padding: 0; justify-content: center; }
+  .topbar .lang-code { display: none; }
+  .topbar .avatar { width: 34px; height: 34px; font-size: 13px; margin: 0 2px; }
+  .topbar::before { top: -8px; height: 8px; left: -16px; right: -16px; }
+
+  .login-card { padding: 28px 20px; }
+  .login-card h1 { font-size: 22px; }
+
+  /* Forms and dialogs: one column, and tall dialogs scroll inside the screen. */
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .modal-backdrop { padding: 10px; align-items: start; overflow-y: auto; }
+  .modal { padding: 18px 16px; max-height: calc(100dvh - 20px); overflow-y: auto; }
+  .modal-head h3 { font-size: 19px; }
+  .modal-actions { flex-wrap: wrap; }
+  .modal-actions .btn { flex: 1 1 auto; }
+  .appt-table th, .appt-table td { padding: 10px 12px; }
+  .appt-header-actions > form { flex: 1 1 100%; min-width: 0; }
+  .terms-card { padding: 24px 18px; }
+}
+
