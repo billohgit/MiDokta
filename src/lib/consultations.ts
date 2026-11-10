@@ -77,6 +77,9 @@ const when = (d: Date) => `${formatDate(d.toISOString())} at ${formatTime(d.toIS
 export async function onConsultationPaid(invoiceId: string, channel: CheckoutChannel | null): Promise<void> {
   const c = await prisma.consultation.findUnique({ where: { invoiceId }, include: { patient: true } });
   if (!c || c.appointmentId) return;
+  // A visit the doctor booked by inviting the patient (src/lib/invites.ts) is confirmed once paid;
+  // one the patient asked for waits for the doctor to accept.
+  const invite = await prisma.patientInvite.findUnique({ where: { invoiceId }, select: { id: true } });
 
   const appt = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Consultation" WHERE id = ${c.id} FOR UPDATE`;
@@ -90,9 +93,10 @@ export async function onConsultationPaid(invoiceId: string, channel: CheckoutCha
         hospitalId: c.hospitalId,
         startsAt: c.startsAt,
         visitType: c.visitType,
-        status: "PENDING",
+        status: invite ? "CONFIRMED" : "PENDING",
       },
     });
+    if (invite) await tx.patientInvite.update({ where: { id: invite.id }, data: { appointmentId: appt.id } });
     await tx.consultation.update({ where: { id: c.id }, data: { appointmentId: appt.id, paidVia: channel, paidAt: new Date() } });
     await tx.invoice.update({ where: { id: invoiceId }, data: { appointmentId: appt.id } });
     return appt;
@@ -101,7 +105,12 @@ export async function onConsultationPaid(invoiceId: string, channel: CheckoutCha
 
   const { patient } = c;
   const body = `${patient.firstName} ${patient.lastName} · ${c.title} · ${when(c.startsAt)}${c.visitType === "VIDEO_CALL" ? " (video call)" : ""} · fee ${formatMoney(c.fee.toString())} paid`;
-  await notifyUsers([c.doctorId], { type: "APPOINTMENT_REQUEST", title: "Paid appointment request from a patient", body, link: `/doctor/appointments/${appt.id}` });
+  await notifyUsers([c.doctorId], {
+    type: invite ? "APPOINTMENT_CONFIRMED" : "APPOINTMENT_REQUEST",
+    title: invite ? "Invited patient paid: visit confirmed" : "Paid appointment request from a patient",
+    body,
+    link: `/doctor/appointments/${appt.id}`,
+  });
   await notifyRoles(FRONT_DESK_ROLES, { type: "APPOINTMENT_REQUEST", title: "New paid appointment request", body, link: `${PORTAL_TOKEN}/appointments` });
 }
 

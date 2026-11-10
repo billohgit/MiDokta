@@ -274,6 +274,8 @@ model User {
   careEvents          CareEvent[]               @relation("CareEventsLogged")
   prescriptionScans   PrescriptionScan[]
   passwordResets      PasswordResetCode[]
+  invitesSent         PatientInvite[]           @relation("InvitesSent")
+  invitesAccepted     PatientInvite[]           @relation("InvitesAccepted")
 
   @@index([role])
 }
@@ -999,6 +1001,47 @@ model PasswordResetCode {
   createdAt DateTime  @default(now())
 
   @@index([userId, createdAt])
+}
+
+enum InviteStatus {
+  /// Texted; waiting for the patient to register.
+  PENDING
+  /// The patient registered and the visit was booked.
+  ACCEPTED
+  CANCELLED
+}
+
+/**
+ * A doctor booking a visit for someone who isn't on MiDokta yet. They're texted a link to register;
+ * registering books the visit with that doctor (paying the fee first if there is one).
+ */
+model PatientInvite {
+  id            String       @id @default(cuid())
+  /// The secret in the registration link (/invite/<token>).
+  token         String       @unique
+  doctorId      String
+  doctor        User         @relation("InvitesSent", fields: [doctorId], references: [id], onDelete: Cascade)
+  firstName     String
+  lastName      String
+  /// E.164; the link is texted here, and the account is registered with it.
+  phone         String
+  title         String
+  startsAt      DateTime
+  visitType     VisitType
+  /// The doctor's fee when they sent it, which is what the patient was told.
+  fee           Decimal?     @db.Decimal(12, 2)
+  status        InviteStatus @default(PENDING)
+  expiresAt     DateTime
+  patientId     String?
+  patient       User?        @relation("InvitesAccepted", fields: [patientId], references: [id], onDelete: SetNull)
+  /// The fee invoice (when there's a fee) or the appointment (when there isn't), once registered.
+  invoiceId     String?      @unique
+  appointmentId String?      @unique
+  acceptedAt    DateTime?
+  createdAt     DateTime     @default(now())
+
+  @@index([doctorId, createdAt])
+  @@index([phone])
 }
 
 model LoginCode {

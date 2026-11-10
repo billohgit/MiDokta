@@ -5,6 +5,9 @@ import Link from "next/link";
 import Avatar from "@/components/appointments/Avatar";
 import { formatDate, fullName } from "@/components/appointments/shared";
 import { displayEmail } from "@/lib/people";
+import { formatMoney } from "@/lib/money";
+import { DEFAULT_COUNTRY } from "@/lib/sms/phone";
+import InvitePatient, { type InviteRow } from "@/components/patients/InvitePatient";
 
 export const dynamic = "force-dynamic";
 
@@ -57,16 +60,54 @@ export default async function DoctorPatientsPage({ searchParams }: Props) {
   }
   const rows = [...byPatient.values()].sort((a, b) => fullName(a.patient).localeCompare(fullName(b.patient)));
 
+  // Visits this doctor booked for people not on MiDokta yet.
+  const invites = await prisma.patientInvite.findMany({
+    where: { doctorId: doctor.id },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    include: { patient: { select: { firstName: true, lastName: true } } },
+  });
+  const paidInvoices = new Set(
+    (await prisma.invoice.findMany({ where: { id: { in: invites.flatMap((i) => (i.invoiceId ? [i.invoiceId] : [])) }, status: "PAID" }, select: { id: true } })).map((i) => i.id),
+  );
+  const inviteRows: InviteRow[] = invites.map((i) => ({
+    id: i.id,
+    name: i.patient ? `${i.patient.firstName} ${i.patient.lastName}` : `${i.firstName} ${i.lastName}`,
+    phone: i.phone,
+    visit: `${formatDate(i.startsAt.toISOString())}`,
+    status:
+      i.status === "CANCELLED"
+        ? "cancelled"
+        : i.status === "ACCEPTED"
+          ? i.invoiceId
+            ? paidInvoices.has(i.invoiceId)
+              ? "paid"
+              : "registered"
+            : "confirmed"
+          : i.expiresAt < now
+            ? "expired"
+            : "waiting",
+  }));
+
   return (
     <>
       <div className="appt-header">
         <h2 className="section-heading">My Patients</h2>
-        <form className="appt-header-actions" role="search">
-          <label className="search">
-            <i className="fa-solid fa-magnifying-glass" />
-            <input name="q" defaultValue={q} placeholder="Search patients..." />
-          </label>
-        </form>
+        <div className="appt-header-actions">
+          <form role="search">
+            <label className="search">
+              <i className="fa-solid fa-magnifying-glass" />
+              <input name="q" defaultValue={q} placeholder="Search patients..." />
+            </label>
+          </form>
+        </div>
+      </div>
+      <div className="invite-bar">
+        <InvitePatient
+          invites={inviteRows}
+          defaultCountry={DEFAULT_COUNTRY}
+          fee={doctor.consultationFee?.isPositive() ? formatMoney(doctor.consultationFee.toString()) : null}
+        />
       </div>
 
       {rows.length === 0 ? (

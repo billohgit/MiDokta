@@ -21,7 +21,8 @@ export type SmsCategory =
   | "PAYMENT_RECEIVED"
   | "LOGIN_CODE"
   | "CHAT"
-  | "PHARMACY_ORDER";
+  | "PHARMACY_ORDER"
+  | "PATIENT_INVITE";
 
 type SmsInput = {
   userId: string;
@@ -98,6 +99,20 @@ export async function queueSms(inputs: SmsInput | SmsInput[]) {
 
   if (pendingIds.length) after(() => deliverSms(pendingIds));
   return { queued: pendingIds.length, skipped };
+}
+
+/**
+ * Texts a number that isn't on an account yet (a doctor inviting a new patient). Logged like any
+ * other SMS, with no user attached.
+ */
+export async function queueSmsToNumber(phone: string, body: string, category: SmsCategory, sentById?: string) {
+  const to = normalizePhone(phone);
+  const skipReason = !to ? "Invalid phone number" : allowlistBlock(to);
+  const row = await prisma.smsMessage.create({
+    data: { to: to ?? phone, body, category, sentById, status: skipReason ? "SKIPPED" : "PENDING", error: skipReason },
+  });
+  if (!skipReason) after(() => deliverSms([row.id]));
+  return { queued: skipReason ? 0 : 1, skipped: skipReason ? 1 : 0 };
 }
 
 /** Sends PENDING messages by id and records the outcome. */
