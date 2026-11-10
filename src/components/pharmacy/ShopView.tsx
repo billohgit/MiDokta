@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { addToCart } from "@/app/actions/pharmacy";
 import useServerAction from "@/components/ui/useServerAction";
+import { distanceKm, formatDistance } from "@/lib/geo";
 import type { ShopProduct } from "./shared";
+import { usePatientLocation } from "./usePatientLocation";
 
 type Props = { products: ShopProduct[]; cartCount: number; cartPharmacy: string | null };
 
@@ -15,14 +17,28 @@ export default function ShopView({ products, cartCount, cartPharmacy }: Props) {
   const [added, setAdded] = useState<string | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
   const { busy, error, setError, run } = useServerAction();
+  const { location, status: locating, request: findMe } = usePatientLocation();
+  const [nearestFirst, setNearestFirst] = useState(true);
+
+  // How far each pharmacy is, once the patient shares where they are; null where a pharmacy has no position.
+  const away = useMemo(() => {
+    const km = new Map<string, number | null>();
+    for (const p of products) {
+      if (!km.has(p.pharmacyId)) km.set(p.pharmacyId, location && p.pharmacyPosition ? distanceKm(location, p.pharmacyPosition) : null);
+    }
+    return km;
+  }, [products, location]);
 
   const pharmacies = useMemo(() => [...new Map(products.map((p) => [p.pharmacyId, p.pharmacyName])).entries()], [products]);
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return products.filter(
+    const list = products.filter(
       (p) => (!pharmacyId || p.pharmacyId === pharmacyId) && (!q || `${p.name} ${p.detail} ${p.pharmacyName}`.toLowerCase().includes(q)),
     );
-  }, [products, query, pharmacyId]);
+    // Nearest pharmacies first; ones without a known position go last.
+    if (location && nearestFirst) list.sort((a, b) => (away.get(a.pharmacyId) ?? Infinity) - (away.get(b.pharmacyId) ?? Infinity));
+    return list;
+  }, [products, query, pharmacyId, location, nearestFirst, away]);
 
   const add = (p: ShopProduct, replaceCart = false) => {
     setAdding(p.id);
@@ -67,11 +83,25 @@ export default function ShopView({ products, cartCount, cartPharmacy }: Props) {
             {pharmacies.map(([id, name]) => (
               <option key={id} value={id}>
                 {name}
+                {away.get(id) != null ? ` (${formatDistance(away.get(id)!)})` : ""}
               </option>
             ))}
           </select>
         )}
+        {location ? (
+          <label className="checkbox-line compact">
+            <input type="checkbox" checked={nearestFirst} onChange={(e) => setNearestFirst(e.target.checked)} /> Nearest first
+          </label>
+        ) : (
+          <button type="button" className="btn btn-outline" onClick={findMe} disabled={locating === "locating"}>
+            <i className={`fa-solid ${locating === "locating" ? "fa-spinner fa-spin" : "fa-location-crosshairs"} btn-icon`} />
+            {locating === "locating" ? "Finding you..." : "Show distances"}
+          </button>
+        )}
       </div>
+      {locating === "denied" && (
+        <p className="form-note">Location is blocked for this site. Allow it in your browser settings to see how far each pharmacy is.</p>
+      )}
 
       {conflict ? (
         <div className="stock-alert">
@@ -109,6 +139,12 @@ export default function ShopView({ products, cartCount, cartPharmacy }: Props) {
               <p className="product-pharmacy">
                 <i className="fa-solid fa-store" /> {p.pharmacyName}
                 {p.pharmacyCity && ` · ${p.pharmacyCity}`}
+                {away.get(p.pharmacyId) != null && (
+                  <span className="product-distance">
+                    {" "}
+                    · <i className="fa-solid fa-location-dot" /> {formatDistance(away.get(p.pharmacyId)!)}
+                  </span>
+                )}
               </p>
               <div className="product-foot">
                 <strong className="product-price">{p.price}</strong>

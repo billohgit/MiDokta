@@ -36,6 +36,8 @@ export type ShopProduct = {
   pharmacyId: string;
   pharmacyName: string;
   pharmacyCity: string | null;
+  /** Where the pharmacy is, if it has set its location. */
+  pharmacyPosition: { lat: number; lng: number } | null;
 };
 
 export type OrderLine = { name: string; quantity: number; amount: string };

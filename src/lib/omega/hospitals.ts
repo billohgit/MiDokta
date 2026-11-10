@@ -1,6 +1,9 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { type LatLng, directionsUrl, distanceKm } from "@/lib/geo";
+
+export { type LatLng, directionsUrl, isLatLng } from "@/lib/geo";
 
 /**
  * Finds the hospitals closest to a patient: the hospitals on Mi Dokta that have a map position,
@@ -11,7 +14,6 @@ import { prisma } from "@/lib/prisma";
  * often overloaded). Both are free public services with fair-use limits, so results are cached.
  */
 
-export type LatLng = { lat: number; lng: number };
 
 export type NearbyHospital = {
   name: string;
@@ -38,25 +40,8 @@ const USER_AGENT = "MiDokta/1.0 (patient hospital finder)";
 const NOMINATIM_URL = process.env.NOMINATIM_URL || "https://nominatim.openstreetmap.org/search";
 const OVERPASS_URL = process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter";
 
-export const isLatLng = (v: unknown): v is LatLng =>
-  typeof v === "object" &&
-  v !== null &&
-  typeof (v as LatLng).lat === "number" &&
-  typeof (v as LatLng).lng === "number" &&
-  Math.abs((v as LatLng).lat) <= 90 &&
-  Math.abs((v as LatLng).lng) <= 180;
 
-function distanceKm(a: LatLng, b: LatLng) {
-  const rad = (d: number) => (d * Math.PI) / 180;
-  const dLat = rad(b.lat - a.lat);
-  const dLng = rad(b.lng - a.lng);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 6371 * 2 * Math.asin(Math.sqrt(h));
-}
 
-/** Opens turn-by-turn directions in Google Maps (the app on phones). */
-export const directionsUrl = (from: LatLng, to: LatLng) =>
-  `https://www.google.com/maps/dir/?api=1&origin=${from.lat},${from.lng}&destination=${to.lat},${to.lng}&travelmode=driving`;
 
 // Dentists are tagged as clinics too, but are no help to someone looking for a doctor.
 const isDentist = (name: string, tags: Record<string, string | undefined>) =>

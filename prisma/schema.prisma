@@ -579,6 +579,9 @@ model Pharmacy {
   address       String
   city          String?
   phone         String?
+  /// Map position, so patients see how far away it is. Set by the pharmacist standing in the pharmacy.
+  latitude      Float?
+  longitude     Float?
   /// What home delivery costs; null means pickup only.
   deliveryFee   Decimal?          @db.Decimal(12, 2)
   /// Where the pharmacy's share of orders is sent.

@@ -8,12 +8,13 @@ import { checkout, setCartQuantity } from "@/app/actions/pharmacy";
 import useServerAction from "@/components/ui/useServerAction";
 import { WALLET_OPTIONS } from "@/components/payments/wallets";
 import { formatMoney } from "@/lib/money";
+import PharmacyDistance from "./PharmacyDistance";
 
 export type CartLine = { productId: string; name: string; detail: string; imageUrl: string | null; unitPrice: number; quantity: number; inStock: number };
 
 type Props = {
   lines: CartLine[];
-  pharmacy: { name: string; address: string; deliveryFee: number | null } | null;
+  pharmacy: { name: string; address: string; deliveryFee: number | null; position: { lat: number; lng: number } | null } | null;
   phone: string | null;
   address: string | null;
 };
@@ -47,6 +48,8 @@ export default function CartView({ lines, pharmacy, phone, address }: Props) {
       <h2 className="section-heading">Your Cart</h2>
       <p className="section-sub">
         From <strong>{pharmacy.name}</strong>, {pharmacy.address}
+        <br />
+        <PharmacyDistance to={pharmacy.position} />
       </p>
 
       <section className="card my-invoice">

@@ -28,6 +28,8 @@ export default async function MyPharmacyPage({ searchParams }: { searchParams: P
     city: pharmacy.city,
     phone: pharmacy.phone,
     deliveryFee: pharmacy.deliveryFee?.toString() ?? null,
+    latitude: pharmacy.latitude,
+    longitude: pharmacy.longitude,
     payoutWallet: pharmacy.payoutWallet,
     payoutAccount: pharmacy.payoutAccount,
   };

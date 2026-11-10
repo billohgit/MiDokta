@@ -8,6 +8,7 @@ import { type ActionResult, DENIED, enumValue, fail, intValue, phoneValue, PHONE
 import { channelsRefundableTo, sendWaitingPayouts, walletAccount } from "@/lib/payouts";
 import { cancelOrder, confirmReceived, dispatchOrder, markDelivered, placeOrder, reportNotReceived } from "@/lib/pharmacy";
 import { AVATAR_TYPES, deleteProductImage, saveProductImage } from "@/lib/uploads";
+import { isLatLng } from "@/lib/geo";
 
 const MONEY = /^\d+(\.\d{1,2})?$/;
 const MAX_PRICE = 1_000_000;
@@ -156,7 +157,23 @@ export async function savePharmacy(formData: FormData): Promise<ActionResult> {
   const payoutAccount = payoutWallet ? walletAccount(payoutWallet, text(formData, "payoutAccount")) : null;
   if (payoutWallet && !payoutAccount) return fail(payoutWallet === "TENKIPAY" ? "Enter your TenkiPay wallet number." : "Enter a valid Sierra Leone mobile number.");
 
-  const data = { name, address, city: text(formData, "city")?.slice(0, 80) ?? null, phone, deliveryFee, payoutWallet, payoutAccount };
+  // Map position: both numbers or neither (cleared).
+  const lat = text(formData, "latitude");
+  const lng = text(formData, "longitude");
+  const position = lat && lng ? { lat: Number(lat), lng: Number(lng) } : null;
+  if ((lat || lng) && !isLatLng(position)) return fail("That map position isn't valid. Tap 'Use my current location' again.");
+
+  const data = {
+    name,
+    address,
+    city: text(formData, "city")?.slice(0, 80) ?? null,
+    phone,
+    deliveryFee,
+    payoutWallet,
+    payoutAccount,
+    latitude: position?.lat ?? null,
+    longitude: position?.lng ?? null,
+  };
   await prisma.pharmacy.upsert({ where: { ownerId: me.id }, create: { ...data, ownerId: me.id }, update: data });
   await sendWaitingPayouts(me.id, "PHARMACY_SHARE", payoutWallet, payoutAccount);
   refresh();

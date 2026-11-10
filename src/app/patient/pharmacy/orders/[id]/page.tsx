@@ -10,6 +10,7 @@ import { WALLET_LABEL } from "@/lib/payouts";
 import { formatDate, formatTime } from "@/components/appointments/shared";
 import { ORDER_STATUS_CLASS, statusLabel } from "@/components/pharmacy/shared";
 import OrderActions from "@/components/pharmacy/OrderActions";
+import PharmacyDistance from "@/components/pharmacy/PharmacyDistance";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,10 @@ export default async function MyOrderPage({ params }: { params: Promise<{ id: st
             <p className="section-sub">
               {o.pharmacy.name} · {o.pharmacy.address}
               {o.pharmacy.phone && ` · ${o.pharmacy.phone}`}
+              <br />
+              <PharmacyDistance
+                to={o.pharmacy.latitude != null && o.pharmacy.longitude != null ? { lat: o.pharmacy.latitude, lng: o.pharmacy.longitude } : null}
+              />
             </p>
           </div>
           <span className={`status-pill ${ORDER_STATUS_CLASS[o.status]}`}>{statusLabel(o.status, o.fulfilment)}</span>

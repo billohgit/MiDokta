@@ -5,6 +5,7 @@ import type { MobileWallet } from "@prisma/client";
 import { savePharmacy } from "@/app/actions/pharmacy";
 import useServerAction from "@/components/ui/useServerAction";
 import { WALLET_OPTIONS } from "@/components/payments/wallets";
+import { directionsUrl } from "@/lib/geo";
 
 export type PharmacySettings = {
   name: string;
@@ -12,6 +13,8 @@ export type PharmacySettings = {
   city: string | null;
   phone: string | null;
   deliveryFee: string | null;
+  latitude: number | null;
+  longitude: number | null;
   payoutWallet: MobileWallet | null;
   payoutAccount: string | null;
 };
@@ -20,7 +23,29 @@ export type PharmacySettings = {
 export default function PharmacySettingsForm({ pharmacy, platformPercent }: { pharmacy: PharmacySettings | null; platformPercent: string }) {
   const [wallet, setWallet] = useState<MobileWallet | "">(pharmacy?.payoutWallet ?? "");
   const [saved, setSaved] = useState(false);
-  const { busy, error, submitWith } = useServerAction();
+  const { busy, error, setError, submitWith } = useServerAction();
+  const [position, setPosition] = useState(
+    pharmacy?.latitude != null && pharmacy?.longitude != null ? { lat: pharmacy.latitude, lng: pharmacy.longitude } : null,
+  );
+  const [locating, setLocating] = useState(false);
+
+  // Standing in the pharmacy, the phone knows where it is better than any typed address.
+  const useCurrentLocation = () => {
+    if (!("geolocation" in navigator)) return setError("This browser can't share its location.");
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        setPosition({ lat: Number(p.coords.latitude.toFixed(6)), lng: Number(p.coords.longitude.toFixed(6)) });
+        setSaved(false);
+        setLocating(false);
+      },
+      () => {
+        setError("Couldn't get your location. Allow location access for this site and try again.");
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 15_000 },
+    );
+  };
 
   return (
     <form className="card my-invoice form-grid" onSubmit={submitWith(savePharmacy, { onSuccess: () => setSaved(true) })} onChange={() => setSaved(false)}>
@@ -46,6 +71,32 @@ export default function PharmacySettingsForm({ pharmacy, platformPercent }: { ph
         <span>Phone</span>
         <input name="phone" type="tel" defaultValue={pharmacy?.phone ?? ""} />
       </label>
+      <div className="field full">
+        <span>Pharmacy location</span>
+        <input type="hidden" name="latitude" value={position?.lat ?? ""} />
+        <input type="hidden" name="longitude" value={position?.lng ?? ""} />
+        <div className="row-actions">
+          <button type="button" className="btn btn-sm btn-outline" onClick={useCurrentLocation} disabled={locating}>
+            <i className={`fa-solid ${locating ? "fa-spinner fa-spin" : "fa-location-crosshairs"} btn-icon`} />
+            {position ? "Update to my current location" : "Use my current location"}
+          </button>
+          {position && (
+            <>
+              <a href={directionsUrl(null, position)} target="_blank" rel="noreferrer" className="link-btn">
+                <i className="fa-solid fa-map-location-dot" /> Check on the map
+              </a>
+              <button type="button" className="link-btn" onClick={() => setPosition(null)}>
+                Remove
+              </button>
+            </>
+          )}
+        </div>
+        <small className="form-note">
+          {position
+            ? "Set. Patients see how far your pharmacy is from them. Press Save to keep a change."
+            : "Tap this while you're inside the pharmacy, so patients can see how far away you are."}
+        </small>
+      </div>
       <label className="field full">
         <span>Delivery fee (Le)</span>
         <input name="deliveryFee" inputMode="decimal" defaultValue={pharmacy?.deliveryFee ?? ""} placeholder="Leave empty if you don't deliver (pickup only)" />

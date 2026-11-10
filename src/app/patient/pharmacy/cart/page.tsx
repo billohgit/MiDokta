@@ -25,7 +25,14 @@ export default async function CartPage() {
         quantity: i.quantity,
         inStock: i.product.quantity,
       }))}
-      pharmacy={pharmacy && { name: pharmacy.name, address: pharmacy.address, deliveryFee: pharmacy.deliveryFee?.toNumber() ?? null }}
+      pharmacy={
+        pharmacy && {
+          name: pharmacy.name,
+          address: pharmacy.address,
+          deliveryFee: pharmacy.deliveryFee?.toNumber() ?? null,
+          position: pharmacy.latitude != null && pharmacy.longitude != null ? { lat: pharmacy.latitude, lng: pharmacy.longitude } : null,
+        }
+      }
       phone={patient.phone}
       address={[patient.address, patient.city].filter(Boolean).join(", ") || null}
     />

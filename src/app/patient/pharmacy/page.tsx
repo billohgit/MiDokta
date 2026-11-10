@@ -12,7 +12,7 @@ export default async function PharmacyShopPage() {
   const [products, cart] = await Promise.all([
     prisma.pharmacyProduct.findMany({
       where: { isActive: true, quantity: { gt: 0 }, pharmacy: { isActive: true } },
-      include: { pharmacy: { select: { id: true, name: true, city: true } } },
+      include: { pharmacy: { select: { id: true, name: true, city: true, latitude: true, longitude: true } } },
       orderBy: [{ name: "asc" }, { price: "asc" }],
       take: 500,
     }),
@@ -34,6 +34,7 @@ export default async function PharmacyShopPage() {
         pharmacyId: p.pharmacy.id,
         pharmacyName: p.pharmacy.name,
         pharmacyCity: p.pharmacy.city,
+        pharmacyPosition: p.pharmacy.latitude != null && p.pharmacy.longitude != null ? { lat: p.pharmacy.latitude, lng: p.pharmacy.longitude } : null,
       }))}
     />
   );
