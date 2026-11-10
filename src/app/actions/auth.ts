@@ -202,7 +202,7 @@ export async function passwordReset(prev: ResetState, formData: FormData): Promi
 export type SignupState = {
   error: string | null;
   done: boolean;
-  values: { firstName: string; lastName: string; email: string; country: string; phone: string; role: string };
+  values: { firstName: string; lastName: string; email: string; country: string; phone: string; role: string; mainIllness: string };
 };
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
@@ -229,6 +229,8 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
     country: text(formData, "country") ?? "",
     phone: text(formData, "phone") ?? "",
     role: text(formData, "role") ?? "",
+    // Optional, patients only: what they mainly need help with, for doctor and medicine suggestions.
+    mainIllness: text(formData, "mainIllness")?.slice(0, 120) ?? "",
   };
   const fail = (error: string): SignupState => ({ error, done: false, values });
 
@@ -274,6 +276,7 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
         email: values.email,
         phone,
         role,
+        mainIllness: role === Role.PATIENT && values.mainIllness ? values.mainIllness : null,
         avatarUrl,
         idCardUrl,
         verificationStatus: "PENDING",

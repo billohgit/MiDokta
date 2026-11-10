@@ -115,3 +115,13 @@ export async function uploadAvatar(formData: FormData): Promise<ActionResult> {
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+/** A patient sets (or clears) their main illness, which drives the suggestions on their dashboard. */
+export async function setMainIllness(formData: FormData): Promise<ActionResult> {
+  const user = await authorize(Role.PATIENT);
+  if (!user) return { ok: false, error: "Please sign in again." };
+  const value = text(formData, "mainIllness")?.slice(0, 120) ?? null;
+  await prisma.user.update({ where: { id: user.id }, data: { mainIllness: value } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

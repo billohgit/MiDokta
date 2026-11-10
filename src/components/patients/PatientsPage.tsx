@@ -35,6 +35,7 @@ export default async function PatientsPage({ basePath, canRegister = false }: Pr
     bloodGroup: p.bloodGroup,
     allergies: p.allergies,
     chronicConditions: p.chronicConditions,
+    mainIllness: p.mainIllness,
     address: p.address,
     city: p.city,
     emergencyContactName: p.emergencyContactName,

@@ -68,6 +68,7 @@ export default async function PatientDetailPage({ id, basePath, canManage = fals
               bloodGroup: patient.bloodGroup,
               allergies: patient.allergies,
               chronicConditions: patient.chronicConditions,
+              mainIllness: patient.mainIllness,
               address: patient.address,
               city: patient.city,
               emergencyContactName: patient.emergencyContactName,

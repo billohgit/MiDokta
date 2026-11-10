@@ -7,15 +7,17 @@ import { SIGNUP_ROLES } from "@/lib/roles";
 import ImageCapture from "@/components/ui/ImageCapture";
 import PhoneInput from "@/components/ui/PhoneInput";
 import { useDictionary } from "@/components/i18n/LocaleProvider";
+import { CONDITIONS } from "@/lib/conditions";
 
 export default function SignupForm({ defaultCountry }: { defaultCountry: string }) {
   const [state, action, pending] = useActionState<SignupState, FormData>(signup, {
     error: null,
     done: false,
-    values: { firstName: "", lastName: "", email: "", country: defaultCountry, phone: "", role: "" },
+    values: { firstName: "", lastName: "", email: "", country: defaultCountry, phone: "", role: "", mainIllness: "" },
   });
   const v = state.values;
   const [country, setCountry] = useState(v.country);
+  const [role, setRole] = useState(v.role);
   const [photo, setPhoto] = useState<File | null>(null);
   const [idCard, setIdCard] = useState<File | null>(null);
   const [missing, setMissing] = useState<string | null>(null);
@@ -83,7 +85,7 @@ export default function SignupForm({ defaultCountry }: { defaultCountry: string 
         </div>
         <label className="field">
           <span>{d.signup.iAmA}</span>
-          <select name="role" defaultValue={v.role} required>
+          <select name="role" value={role} onChange={(e) => setRole(e.target.value)} required>
             <option value="" disabled>
               {d.signup.chooseRole}
             </option>
@@ -94,6 +96,18 @@ export default function SignupForm({ defaultCountry }: { defaultCountry: string 
             ))}
           </select>
         </label>
+        {role === "PATIENT" && (
+          <label className="field">
+            <span>{d.signup.mainIllness}</span>
+            <input name="mainIllness" list="common-illnesses" maxLength={120} defaultValue={v.mainIllness} placeholder={d.signup.mainIllnessPlaceholder} />
+            <datalist id="common-illnesses">
+              {CONDITIONS.map((c) => (
+                <option key={c.name} value={c.name} />
+              ))}
+            </datalist>
+            <small className="form-note">{d.signup.mainIllnessNote}</small>
+          </label>
+        )}
         <ImageCapture
           label={d.signup.photo}
           hint={d.signup.photoHint}

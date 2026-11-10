@@ -92,6 +92,9 @@ const en = {
     idCard: "Identity card",
     idCardHint: "National ID, passport, driver's licence or voter card",
     confirmPassword: "Confirm password",
+    mainIllness: "Main illness or health concern (optional)",
+    mainIllnessPlaceholder: "e.g. Malaria, high blood pressure, diabetes",
+    mainIllnessNote: "We'll suggest doctors and medicines for it. Not sure? Leave it blank.",
     idPrivacy:
       "Your ID is stored privately and only administrators can see it. It is checked automatically with AI to confirm it matches your photo and name.",
     agreeTo: "I have read and agree to the",
@@ -192,6 +195,9 @@ const fr: Dictionary = {
     idCard: "Pièce d'identité",
     idCardHint: "Carte d'identité, passeport, permis de conduire ou carte d'électeur",
     confirmPassword: "Confirmer le mot de passe",
+    mainIllness: "Maladie ou problème de santé principal (facultatif)",
+    mainIllnessPlaceholder: "ex. paludisme, hypertension, diabète",
+    mainIllnessNote: "Nous vous suggérerons des médecins et des médicaments. Vous ne savez pas ? Laissez vide.",
     idPrivacy:
       "Votre pièce d'identité est conservée de façon confidentielle et seuls les administrateurs peuvent la voir. Elle est vérifiée automatiquement par IA pour confirmer qu'elle correspond à votre photo et à votre nom.",
     agreeTo: "J'ai lu et j'accepte les",

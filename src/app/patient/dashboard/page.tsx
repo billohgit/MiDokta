@@ -11,6 +11,8 @@ import StatCard from "@/components/StatCard";
 import UpcomingList from "@/components/patient-portal/UpcomingList";
 import DoctorList from "@/components/patient-portal/DoctorList";
 import VisitRatingList from "@/components/ratings/VisitRatingList";
+import ForYouCard from "@/components/patient-portal/ForYouCard";
+import { recommendationsFor } from "@/lib/recommendations";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,7 @@ export default async function PatientDashboardPage() {
     prisma.medicalRecord.count({ where: { patientId: patient.id } }),
     ratableVisits(patient.id, 5),
   ]);
+  const forYou = patient.mainIllness ? await recommendationsFor(patient.mainIllness) : null;
   const promptSince = Date.now() - RATE_PROMPT_DAYS * 24 * 60 * 60 * 1000;
   const toRate = recentVisits.filter((v) => !v.rating && v.startsAt.getTime() >= promptSince).slice(0, 1);
   const balance = open.reduce((sum, i) => sum + Number(i.total) - Number(i.amountPaid), 0);
@@ -70,6 +73,18 @@ export default async function PatientDashboardPage() {
           <StatCard key={s.label} {...s} />
         ))}
       </section>
+
+      {forYou ? (
+        <ForYouCard rec={forYou} />
+      ) : (
+        <Link href="/patient/settings#main-illness" className="card pay-reminder">
+          <i className="fa-solid fa-stethoscope" />
+          <span>
+            <strong>Have a main health concern?</strong> Tell us, and we&apos;ll suggest doctors and medicines for it. It&apos;s optional.
+          </span>
+          <i className="fa-solid fa-chevron-right" />
+        </Link>
+      )}
 
       {balance > 0 && (
         <Link href="/patient/billing" className="card pay-reminder">

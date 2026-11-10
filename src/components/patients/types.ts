@@ -13,6 +13,8 @@ export type PatientFormData = {
   bloodGroup: string | null;
   allergies: string | null;
   chronicConditions: string | null;
+  /** What the patient said is their main illness (optional). */
+  mainIllness: string | null;
   address: string | null;
   city: string | null;
   emergencyContactName: string | null;

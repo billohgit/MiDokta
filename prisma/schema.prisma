@@ -217,6 +217,9 @@ model User {
   bloodGroup            String?
   allergies             String?
   chronicConditions     String?
+  /// The patient's own answer to "what is your main illness or health concern?", given when
+  /// registering (optional). Drives the doctor and medicine suggestions on their dashboard.
+  mainIllness           String?
   emergencyContactName  String?
   emergencyContactPhone String?
   /// Consent to receive SMS notifications on `phone`.

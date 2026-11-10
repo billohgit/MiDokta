@@ -1723,3 +1723,17 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
 
 .forgot-link { align-self: flex-end; margin-top: -6px; font-size: 14px; font-weight: 600; color: var(--primary); }
 .forgot-link:hover { text-decoration: underline; }
+
+/* Patient dashboard: suggestions for their main illness */
+.for-you { padding: 20px 22px; margin-bottom: 18px; }
+.for-you-title { font-size: 22px; }
+.for-you-disclaimer { margin: 10px 0 16px; padding: 10px 12px; border-radius: 8px; background: #eef6fb; color: #31566b; font-size: 13px; line-height: 1.5; }
+.for-you-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px 28px; }
+.for-you-subhead { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.for-you-list { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-direction: column; gap: 12px; }
+.for-you-list > li { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; font-size: 14px; }
+.for-you-medicine .status-pill { font-size: 11px; }
+.for-you-stock { display: block; margin-top: 4px; }
+.for-you-products { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.for-you-product { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-top: 6px; border-top: 1px dashed var(--border); font-size: 13px; }
+.for-you-added { color: var(--brand-teal); font-weight: 600; font-size: 13px; white-space: nowrap; }

@@ -5,6 +5,7 @@ import Modal from "@/components/ui/Modal";
 import useServerAction from "@/components/ui/useServerAction";
 import { BLOOD_GROUPS } from "@/lib/people";
 import type { PatientFormData } from "./types";
+import { CONDITIONS } from "@/lib/conditions";
 
 type Props = { patient: PatientFormData | null; onClose: () => void; onSaved?: (id: string) => void };
 
@@ -113,6 +114,22 @@ export default function PatientFormModal({ patient, onClose, onSaved }: Props) {
             defaultValue={patient?.chronicConditions ?? ""}
             placeholder="e.g. Hypertension"
           />
+        </label>
+
+        <label className="field full">
+          <span>Main illness or health concern (optional)</span>
+          <input
+            name="mainIllness"
+            list="common-illnesses"
+            maxLength={120}
+            defaultValue={patient?.mainIllness ?? ""}
+            placeholder="What the patient says they mainly need help with. Leave blank if they don't know."
+          />
+          <datalist id="common-illnesses">
+            {CONDITIONS.map((c) => (
+              <option key={c.name} value={c.name} />
+            ))}
+          </datalist>
         </label>
 
         <p className="form-section full">Emergency contact</p>

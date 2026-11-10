@@ -12,8 +12,10 @@ import VisitRatingList from "@/components/ratings/VisitRatingList";
 
 export const dynamic = "force-dynamic";
 
-export default async function PatientAppointmentsPage() {
+export default async function PatientAppointmentsPage({ searchParams }: { searchParams: Promise<{ book?: string }> }) {
   const patient = await requireUser(Role.PATIENT);
+  // "?book=<doctor>" (from a suggestion) opens the booking form with that doctor chosen.
+  const { book } = await searchParams;
 
   const [upcoming, all, doctors, visits] = await Promise.all([
     myUpcomingAppointments(patient.id),
@@ -43,6 +45,7 @@ export default async function PatientAppointmentsPage() {
             fee: d.consultationFee?.isPositive() ? formatMoney(d.consultationFee.toString()) : null,
           }))}
           phone={patient.phone}
+          initialDoctorId={book && doctors.some((d) => d.id === book) ? book : undefined}
         />
       </div>
 

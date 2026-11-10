@@ -40,7 +40,7 @@ export default function PatientSummary({ patient, actions, compact }: Props) {
         {actions}
       </section>
 
-      {(patient.allergies || patient.chronicConditions) && (
+      {(patient.allergies || patient.chronicConditions || patient.mainIllness) && (
         <section className="medical-alerts">
           {patient.allergies && (
             <div className="medical-alert danger">
@@ -57,6 +57,15 @@ export default function PatientSummary({ patient, actions, compact }: Props) {
               <div>
                 <strong>Chronic conditions</strong>
                 <p>{patient.chronicConditions}</p>
+              </div>
+            </div>
+          )}
+          {patient.mainIllness && (
+            <div className="medical-alert">
+              <i className="fa-solid fa-comment-medical" />
+              <div>
+                <strong>Main concern (patient&apos;s own words)</strong>
+                <p>{patient.mainIllness}</p>
               </div>
             </div>
           )}

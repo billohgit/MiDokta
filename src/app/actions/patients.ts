@@ -57,6 +57,7 @@ export async function savePatient(formData: FormData): Promise<ActionResult> {
     city: text(formData, "city"),
     allergies: text(formData, "allergies"),
     chronicConditions: text(formData, "chronicConditions"),
+    mainIllness: text(formData, "mainIllness")?.slice(0, 120) ?? null,
     emergencyContactName: text(formData, "emergencyContactName"),
     emergencyContactPhone: text(formData, "emergencyContactPhone"),
   };

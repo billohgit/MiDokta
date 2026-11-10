@@ -3,6 +3,7 @@ import { requireUser, signedInRecently } from "@/lib/auth";
 import { displayEmail, toProfile } from "@/lib/people";
 import ProfileSettings from "@/components/settings/ProfileSettings";
 import PasswordSettings from "@/components/settings/PasswordSettings";
+import MainIllnessSettings from "@/components/settings/MainIllnessSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export default async function PatientSettingsPage() {
   const patient = await requireUser(Role.PATIENT);
   return (
     <ProfileSettings profile={toProfile(patient)}>
+      <MainIllnessSettings current={patient.mainIllness} />
       <PasswordSettings askCurrent={!(await signedInRecently())} hasEmail={displayEmail(patient.email) !== null} />
     </ProfileSettings>
   );

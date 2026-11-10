@@ -16,11 +16,20 @@ type Doctor = { id: string; name: string; specialty: string | null; fee: string 
  * who charges a fee, the patient pays it first (we take them to the invoice), and says where a refund
  * should go if the visit is declined or cancelled.
  */
-export default function RequestAppointmentButton({ doctors, phone }: { doctors: Doctor[]; phone: string | null }) {
+export default function RequestAppointmentButton({
+  doctors,
+  phone,
+  initialDoctorId,
+}: {
+  doctors: Doctor[];
+  phone: string | null;
+  /** Opens the form straight away with this doctor chosen (from a suggestion's Book link). */
+  initialDoctorId?: string;
+}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!initialDoctorId);
   const [done, setDone] = useState(false);
-  const [doctorId, setDoctorId] = useState("");
+  const [doctorId, setDoctorId] = useState(initialDoctorId ?? "");
   const [wallet, setWallet] = useState<MobileWallet>("ORANGE_MONEY");
   const { busy, error, setError, submitWith } = useServerAction();
   const today = new Date().toLocaleDateString("en-CA");
