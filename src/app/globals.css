@@ -1698,7 +1698,7 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
 .insight-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 32px; flex: 1; margin: 0; }
 .insight-stats dt { color: var(--muted); font-size: 13px; }
 .insight-stats dd { margin: 2px 0 0; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; margin-bottom: 14px; }
+.insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 18px; margin-bottom: 14px; }
 .insight-card { padding: 18px 20px; }
 .insight-title { font-size: 17px; font-weight: 700; }
 .insight-empty { color: var(--muted); font-size: 14px; padding: 24px 0; }
@@ -1797,3 +1797,81 @@ img, video { max-width: 100%; }
   .terms-card { padding: 24px 18px; }
 }
 
+
+/* ---------- Malaria ---------- */
+/* Omega's check, inside the Omega chat. */
+.malaria-check { display: flex; flex-direction: column; gap: 10px; }
+.malaria-pair { display: contents; }
+.malaria-question { white-space: normal; }
+.malaria-question p { margin: 4px 0 10px; font-weight: 500; }
+.malaria-step { display: block; color: var(--muted); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+.malaria-options { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.malaria-options select { height: 38px; border: 1px solid #ced4da; border-radius: 8px; padding: 0 8px; font: inherit; font-size: 14px; max-width: 100%; }
+.malaria-signs { display: flex; flex-direction: column; margin-bottom: 6px; }
+.malaria-signs .checkbox-line { min-height: 36px; font-size: 14px; }
+.malaria-result { white-space: normal; border-left: 4px solid #7cc629 !important; max-width: 100%; }
+.malaria-result.malaria-suspected { border-left-color: #e0a100 !important; }
+.malaria-result.malaria-danger { border-left-color: var(--primary) !important; background: #fff7f7; }
+.malaria-result p { margin: 6px 0; }
+.malaria-result h4 { margin: 10px 0 2px; font-size: 13px; color: var(--muted); }
+.malaria-places { list-style: none; padding: 0; margin: 0 0 8px; }
+.malaria-places li { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.malaria-places li > div:first-child { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.malaria-places small { color: var(--muted); font-size: 12.5px; }
+
+/* The patient's page. */
+.malaria-case { padding: 22px 24px; margin-bottom: 16px; border-left: 4px solid #e0a100; max-width: 760px; }
+.malaria-case.emergency { border-left-color: var(--primary); background: #fff9f9; }
+.malaria-case h3 { font-size: 19px; font-weight: 700; }
+.malaria-case p { margin: 8px 0; }
+.malaria-place { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin: 8px 0; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.malaria-place > div:first-child { flex: 1; min-width: 0; }
+.malaria-place small { color: var(--muted); }
+.malaria-days { list-style: none; padding: 0; margin: 12px 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.malaria-days li { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 76px; padding: 10px 8px; border: 1px solid var(--border); border-radius: 10px; font-weight: 600; font-size: 14px; }
+.malaria-days li i { font-size: 20px; color: #ced4da; }
+.malaria-days li small { color: var(--muted); font-weight: 400; font-size: 12px; }
+.malaria-days li.taken i { color: #3d7a0c; }
+.malaria-days li.missed i { color: var(--primary); }
+.malaria-days li.today { border-color: #e0a100; background: #fffaf0; }
+.malaria-outcome { margin: 12px 0; padding: 14px; border-radius: 10px; background: #f1f6ff; }
+.malaria-outcome-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.malaria-tip-card { display: flex; gap: 16px; align-items: flex-start; padding: 18px 22px; margin-bottom: 8px; max-width: 760px; border-left: 4px solid var(--brand-teal); }
+.malaria-tip-card > i { font-size: 26px; color: var(--brand-teal); margin-top: 2px; }
+.malaria-tip-card h3 { font-size: 15px; font-weight: 700; }
+.malaria-tip-card p { margin-top: 4px; }
+.malaria-tips { max-width: 760px; padding: 16px 20px 16px 40px; display: flex; flex-direction: column; gap: 8px; line-height: 1.5; }
+.malaria-tips li.on { font-weight: 600; color: var(--brand-teal); }
+.malaria-home > i:first-child { color: var(--brand-teal) !important; }
+.malaria-home { border-left-color: var(--brand-teal); }
+.malaria-home.open { border-left-color: #e0a100; }
+.malaria-home.open > i:first-child { color: #e0a100 !important; }
+
+/* Health workers and admins. */
+.malaria-danger-pill { margin-left: 8px; vertical-align: middle; font-size: 12px; }
+.late-banner { background: #fffaf0; color: #b45309; font-weight: 600; margin-bottom: 14px; }
+.malaria-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 16px; margin-bottom: 16px; align-items: start; }
+.malaria-detail-grid .my-invoice, .malaria-actions .my-invoice { max-width: none; }
+.malaria-detail-grid .details-subhead, .malaria-actions .details-subhead { margin-top: 0; margin-bottom: 12px; }
+.malaria-actions { display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px; max-width: 900px; }
+.malaria-actions textarea { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 6px; resize: vertical; }
+.malaria-draft { padding: 12px 14px; margin-bottom: 14px; border-radius: 10px; background: #fffaf0; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.malaria-cancel { align-self: flex-start; }
+.malaria-fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; }
+.malaria-fieldset legend { font-weight: 600; padding: 0 4px; }
+.malaria-fieldset.danger { border-color: #f5c2c2; background: #fffafa; }
+.insight-grid > * { min-width: 0; }
+.malaria-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.malaria-table .trend-up { color: #b71c1c; font-weight: 600; }
+.malaria-table .trend-down { color: #3d7a0c; font-weight: 600; }
+.malaria-table .total-row td { font-weight: 700; border-top: 2px solid var(--border); }
+.malaria-month { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: flex-start; gap: 12px; }
+.malaria-month .field { margin: 0; }
+.malaria-month input { height: 44px; }
+.malaria-message-cell { white-space: normal !important; min-width: 240px; max-width: 420px; }
+
+@media (max-width: 600px) {
+  .malaria-case, .malaria-tip-card { padding: 16px; }
+  .malaria-outcome-buttons .btn { width: 100%; }
+  .malaria-days li { min-width: 64px; }
+}

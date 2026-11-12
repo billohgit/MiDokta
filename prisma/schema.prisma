@@ -276,6 +276,13 @@ model User {
   passwordResets      PasswordResetCode[]
   invitesSent         PatientInvite[]           @relation("InvitesSent")
   invitesAccepted     PatientInvite[]           @relation("InvitesAccepted")
+  malariaScreenings   MalariaScreening[]
+  malariaCases        MalariaCase[]             @relation("MalariaPatient")
+  malariaOpened       MalariaCase[]             @relation("MalariaOpenedBy")
+  malariaTested       MalariaCase[]             @relation("MalariaTestedBy")
+  malariaPlansDrafted MalariaCase[]             @relation("MalariaPlanDraftedBy")
+  malariaPlansApproved MalariaCase[]            @relation("MalariaPlanApprovedBy")
+  malariaCampaigns    MalariaCampaign[]
 
   @@index([role])
 }
@@ -593,6 +600,7 @@ model Pharmacy {
   isActive      Boolean           @default(true)
   products      PharmacyProduct[]
   orders        PharmacyOrder[]
+  malariaCases  MalariaCase[]
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 }
@@ -852,6 +860,8 @@ model CareEvent {
   test       DiagnosticTest? @relation(fields: [testId], references: [id], onDelete: Cascade)
   referralId String?
   referral   Referral?       @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  malariaCaseId String?
+  malariaCase MalariaCase?   @relation(fields: [malariaCaseId], references: [id], onDelete: Cascade)
   actorId    String?
   actor      User?           @relation("CareEventsLogged", fields: [actorId], references: [id], onDelete: SetNull)
   /// STATUS, NOTE, CONTACT (a call or visit with the patient), SMS or ALERT.
@@ -861,6 +871,7 @@ model CareEvent {
 
   @@index([testId, createdAt])
   @@index([referralId, createdAt])
+  @@index([malariaCaseId, createdAt])
 }
 
 model Notification {
@@ -1057,4 +1068,160 @@ model LoginCode {
   createdAt  DateTime  @default(now())
 
   @@index([phone, createdAt])
+}
+
+// ---- Malaria program -------------------------------------------------------------------------------
+
+enum MalariaOutcome {
+  /// Under the 60% symptom score and no danger signs: prevention advice.
+  LOW
+  /// 60% or more of the malaria symptoms: referred for a test.
+  SUSPECTED
+  /// A danger sign of severe malaria: referred to a hospital now.
+  DANGER
+}
+
+enum MalariaCaseStatus {
+  /// Referred for a malaria test; waiting for the result.
+  REFERRED
+  /// Tested negative: closed.
+  NEGATIVE
+  /// Tested positive; waiting for a clinician-approved treatment plan.
+  POSITIVE
+  /// On the approved treatment, with daily reminders.
+  TREATMENT
+  /// Finished the treatment and feeling better.
+  COMPLETED
+  /// Didn't finish, or still unwell: a health worker follows up.
+  INCOMPLETE
+  CANCELLED
+}
+
+enum MalariaTestType {
+  RDT
+  MICROSCOPY
+}
+
+/** One malaria symptom check, by Omega with a patient (or by a health worker for them). */
+model MalariaScreening {
+  id          String         @id @default(cuid())
+  patientId   String
+  patient     User           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  /// Question id -> yes/no, as asked (src/lib/malaria/screening.ts).
+  answers     Json
+  /// Weighted share of malaria symptoms, 0-100.
+  score       Int
+  dangerSigns String[]
+  outcome     MalariaOutcome
+  /// SELF, CHILD (under five) or PREGNANT.
+  forWhom     String         @default("SELF")
+  district    String?
+  latitude    Float?
+  longitude   Float?
+  case        MalariaCase?
+  createdAt   DateTime       @default(now())
+
+  @@index([createdAt])
+  @@index([patientId, createdAt])
+}
+
+/** A suspected malaria case, followed from referral through test, treatment and completion. */
+model MalariaCase {
+  id                 String            @id @default(cuid())
+  number             Int               @unique @default(autoincrement())
+  patientId          String
+  patient            User              @relation("MalariaPatient", fields: [patientId], references: [id], onDelete: Cascade)
+  screeningId        String?           @unique
+  screening          MalariaScreening? @relation(fields: [screeningId], references: [id], onDelete: SetNull)
+  /// The health worker who opened it; null when it came from Omega's check.
+  openedById         String?
+  openedBy           User?             @relation("MalariaOpenedBy", fields: [openedById], references: [id], onDelete: SetNull)
+  status             MalariaCaseStatus @default(REFERRED)
+  urgency            Urgency           @default(URGENT)
+  district           String?
+  latitude           Float?
+  longitude          Float?
+  /// Where the patient was referred to be tested (nearest hospital or clinic).
+  facilityName       String?
+  facilityKind       String?
+  facilityLat        Float?
+  facilityLng        Float?
+  facilityDistanceKm Float?
+  facilityPhone      String?
+  /// The nearest MiDokta pharmacy, for the medicine once it's prescribed.
+  pharmacyId         String?
+  pharmacy           Pharmacy?         @relation(fields: [pharmacyId], references: [id], onDelete: SetNull)
+  // Test result, recorded by a doctor or nurse.
+  testType           MalariaTestType?
+  testPositive       Boolean?
+  species            String?
+  testNote           String?
+  /// Where the test was done, for facility reporting.
+  testedAt           String?
+  testedOn           DateTime?
+  testedById         String?
+  testedBy           User?             @relation("MalariaTestedBy", fields: [testedById], references: [id], onDelete: SetNull)
+  // Treatment plan: a nurse may draft it; only a doctor approves it.
+  planText           String?
+  planDays           Int?
+  dosesPerDay        Int?
+  planDraftedById    String?
+  planDraftedBy      User?             @relation("MalariaPlanDraftedBy", fields: [planDraftedById], references: [id], onDelete: SetNull)
+  planApprovedById   String?
+  planApprovedBy     User?             @relation("MalariaPlanApprovedBy", fields: [planApprovedById], references: [id], onDelete: SetNull)
+  planApprovedAt     DateTime?
+  treatmentStartsAt  DateTime?
+  treatmentEndsAt    DateTime?
+  /// What the patient said at the end: BETTER, STILL_SICK or NOT_FINISHED.
+  patientOutcome     String?
+  outcomeAt          DateTime?
+  completedAt        DateTime?
+  closingNote        String?
+  closedAt           DateTime?
+  doses              MalariaDose[]
+  events             CareEvent[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([status])
+  @@index([patientId])
+  @@index([createdAt])
+  @@index([district])
+}
+
+/** The patient ticking off a treatment day. */
+model MalariaDose {
+  id      String      @id @default(cuid())
+  caseId  String
+  case    MalariaCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  day     Int
+  takenAt DateTime    @default(now())
+
+  @@unique([caseId, day])
+}
+
+/** A malaria prevention message sent to patients, in the app and/or by SMS. */
+model MalariaCampaign {
+  id         String   @id @default(cuid())
+  body       String
+  /// Only patients in this district; null for everyone.
+  district   String?
+  inApp      Boolean
+  sms        Boolean
+  recipients Int
+  smsQueued  Int      @default(0)
+  /// Sent by the weekly schedule rather than a person.
+  automatic  Boolean  @default(false)
+  sentById   String?
+  sentBy     User?    @relation(fields: [sentById], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/** Small app-wide settings, such as the weekly malaria tips. */
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
 }

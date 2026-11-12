@@ -42,6 +42,7 @@ const en = {
     pharmacies: "Pharmacies",
     followUps: "Follow-ups",
     insights: "Insights",
+    malaria: "Malaria",
   },
   topbar: {
     toggleSidebar: "Toggle sidebar",
@@ -144,6 +145,7 @@ const fr: Dictionary = {
     pharmacies: "Pharmacies",
     followUps: "Suivis",
     insights: "Statistiques",
+    malaria: "Paludisme",
   },
   topbar: {
     toggleSidebar: "Afficher ou masquer le menu",

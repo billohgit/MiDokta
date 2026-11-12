@@ -27,7 +27,8 @@ export type OmegaContext = {
 };
 
 export type OmegaReply =
-  | { kind: "reply"; text: string; hospitals?: NearbyHospital[] }
+  /** `action` asks the app to start something itself, such as the malaria check's questions. */
+  | { kind: "reply"; text: string; hospitals?: NearbyHospital[]; action?: "malaria-check" }
   /** Omega needs the patient's location to answer: ask the browser for it and send again. */
   | { kind: "needs-location" };
 
@@ -38,6 +39,7 @@ What you help with:
 - Their medicines: what they take and when, using get_medication_schedule. Only use what their doctor prescribed. Never suggest starting, stopping or changing a dose; for that, tell them to message their doctor in Messages.
 - Their appointments, using get_upcoming_appointments. To book or cancel, point them to the Appointments page.
 - General health and wellness questions, in plain language.
+- Malaria. If the patient mentions fever, chills, sweats, or thinks they (or their child) may have malaria, call start_malaria_check: the app then asks the check's questions itself and refers them for a test if needed. Say one short sentence introducing it; don't ask the questions yourself. For prevention questions, give practical advice: sleeping under a treated net every night, removing standing water, covering up at dusk, testing within 24 hours of a fever, and finishing every dose of malaria medicine.
 
 Safety:
 - You are not a doctor and do not diagnose. For anything beyond general information, suggest they book an appointment or message their doctor.
@@ -72,14 +74,23 @@ const TOOLS: Anthropic.Beta.BetaTool[] = [
     "The medicines the patient is currently prescribed, with dose, how often, and the times of day to take each (morning, midday, evening, night)."
   ),
   tool("get_upcoming_appointments", "The patient's upcoming appointments and pending requests, soonest first."),
+  tool(
+    "start_malaria_check",
+    "Start the app's malaria check: a short set of yes/no symptom questions the app asks itself. With 60% or more of the symptoms, or any danger sign, the patient is referred to the nearest hospital or clinic for a test, and health workers follow the case."
+  ),
 ];
 
 let client: Anthropic | null = null;
 
 class NeedsLocation extends Error {}
 
-async function runTool(name: string, input: Record<string, unknown>, ctx: OmegaContext, found: { hospitals?: NearbyHospital[] }) {
+type Found = { hospitals?: NearbyHospital[]; action?: "malaria-check" };
+
+async function runTool(name: string, input: Record<string, unknown>, ctx: OmegaContext, found: Found) {
   switch (name) {
+    case "start_malaria_check":
+      found.action = "malaria-check";
+      return { started: true, note: "The app is now showing the first question. Briefly tell the patient to answer the questions on screen." };
     case "find_nearest_hospitals": {
       if (!ctx.location) throw new NeedsLocation();
       const { hospitals, error } = await nearestHospitals(ctx.location, input.include_clinics !== false);
@@ -123,7 +134,7 @@ async function runTool(name: string, input: Record<string, unknown>, ctx: OmegaC
 export async function askOmega(history: OmegaTurn[], ctx: OmegaContext): Promise<OmegaReply> {
   client ??= new Anthropic();
   const messages: Anthropic.Beta.BetaMessageParam[] = history.map((t) => ({ role: t.role, content: t.text }));
-  const found: { hospitals?: NearbyHospital[] } = {};
+  const found: Found = {};
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const response = await client.beta.messages.create({
@@ -157,7 +168,7 @@ export async function askOmega(history: OmegaTurn[], ctx: OmegaContext): Promise
         .map((b) => b.text)
         .join(" ")
         .trim();
-      return { kind: "reply", text: text || "Sorry, I didn't catch that. Could you say it again?", hospitals: found.hospitals };
+      return { kind: "reply", text: text || "Sorry, I didn't catch that. Could you say it again?", hospitals: found.hospitals, action: found.action };
     }
 
     messages.push({ role: "assistant", content: response.content });

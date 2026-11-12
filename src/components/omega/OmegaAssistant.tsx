@@ -2,7 +2,10 @@
 
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import type { NearbyHospital } from "@/lib/omega/hospitals";
+import { tipOfTheWeek } from "@/lib/malaria/screening";
 import { canListen, listen, setVoiceEnabled, speak, spokenDose, stopSpeaking, voiceEnabled } from "./speech";
+import MalariaCheck from "./MalariaCheck";
+import { MALARIA_CHECK_EVENT } from "./events";
 
 /**
  * Omega, the patient's AI health assistant: a floating button on every patient page that opens a
@@ -43,7 +46,7 @@ async function knownPosition(): Promise<LatLng | null> {
 const localTime = () =>
   new Date().toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
-type Reply = { kind: "reply"; text: string; hospitals?: NearbyHospital[] } | { kind: "needs-location" };
+type Reply = { kind: "reply"; text: string; hospitals?: NearbyHospital[]; action?: "malaria-check" } | { kind: "needs-location" };
 
 async function ask(history: Entry[], location: LatLng | null): Promise<Reply> {
   const res = await fetch("/api/omega", {
@@ -70,6 +73,12 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
   const [voice, setVoice] = useState(true);
   const [micSupported, setMicSupported] = useState(false);
   const stopListening = useRef<(() => void) | null>(null);
+  /** The malaria check on screen (its key, so starting again restarts it). */
+  const [check, setCheck] = useState<number | null>(null);
+  const startCheck = () => {
+    setOpen(true);
+    setCheck(Date.now());
+  };
   const scroller = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -78,8 +87,13 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
   }, []);
 
   useEffect(() => {
+    window.addEventListener(MALARIA_CHECK_EVENT, startCheck);
+    return () => window.removeEventListener(MALARIA_CHECK_EVENT, startCheck);
+  }, []);
+
+  useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
-  }, [entries, busy]);
+  }, [entries, busy, check]);
 
   useEffect(() => {
     if (!open) {
@@ -117,7 +131,10 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
         setStatus("Searching for hospitals near you...");
         reply = await ask(history, position);
       }
-      if (reply.kind === "reply") answer({ role: "assistant", text: reply.text, hospitals: reply.hospitals });
+      if (reply.kind === "reply") {
+        answer({ role: "assistant", text: reply.text, hospitals: reply.hospitals });
+        if (reply.action === "malaria-check") setCheck(Date.now());
+      }
     } catch (e) {
       answer({ role: "assistant", text: e instanceof Error ? e.message : "Something went wrong.", error: true });
     } finally {
@@ -141,6 +158,12 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
       },
       onError: (message) => setEntries((prev) => [...prev, { role: "assistant", text: message, error: true }]),
     });
+  };
+
+  const malariaTip = () => {
+    const tip = `Malaria tip of the week: ${tipOfTheWeek().text}`;
+    setEntries((prev) => [...prev, { role: "assistant", text: tip }]);
+    if (voice) speak(tip);
   };
 
   const toggleVoice = () => {
@@ -179,7 +202,7 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
           <div className="omega-messages" ref={scroller} aria-live="polite">
             <div className="omega-msg assistant">
               Hi {firstName}! I&apos;m Omega. Ask me about your medicines, your appointments, or where the nearest hospital
-              is. {micSupported ? "Tap the microphone to talk to me." : ""}
+              is. If you have a fever, I can check you for malaria. {micSupported ? "Tap the microphone to talk to me." : ""}
             </div>
             {entries.map((e, i) => (
               <div key={i} className={`omega-msg ${e.role}${e.error ? " error" : ""}`}>
@@ -187,13 +210,20 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
                 {e.hospitals && e.hospitals.length > 0 && <HospitalResults hospitals={e.hospitals} />}
               </div>
             ))}
+            {check && <MalariaCheck key={check} say={(t) => voice && speak(t)} getPosition={getPosition} onClose={() => setCheck(null)} />}
             {busy && (
               <div className="omega-msg assistant omega-typing">
                 <i className="fa-solid fa-circle-notch fa-spin" /> {status}
               </div>
             )}
-            {entries.length === 0 && (
+            {entries.length === 0 && !check && (
               <div className="omega-suggestions">
+                <button className="omega-chip" onClick={startCheck} disabled={busy}>
+                  <i className="fa-solid fa-mosquito" /> Malaria check
+                </button>
+                <button className="omega-chip" onClick={malariaTip} disabled={busy}>
+                  <i className="fa-solid fa-shield-virus" /> Malaria tip
+                </button>
                 {SUGGESTIONS.map((s) => (
                   <button key={s.label} className="omega-chip" onClick={() => send(s.text)} disabled={busy}>
                     <i className={`fa-solid ${s.icon}`} /> {s.label}

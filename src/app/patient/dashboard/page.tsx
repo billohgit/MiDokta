@@ -12,6 +12,9 @@ import UpcomingList from "@/components/patient-portal/UpcomingList";
 import DoctorList from "@/components/patient-portal/DoctorList";
 import VisitRatingList from "@/components/ratings/VisitRatingList";
 import ForYouCard from "@/components/patient-portal/ForYouCard";
+import { OPEN_STATUSES } from "@/lib/malaria/cases";
+import { tipOfTheWeek } from "@/lib/malaria/screening";
+import { STATUS_LABEL } from "@/components/malaria/shared";
 import { recommendationsFor } from "@/lib/recommendations";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +30,7 @@ function greeting(now: Date) {
 export default async function PatientDashboardPage() {
   const patient = await requireUser(Role.PATIENT);
 
-  const [upcoming, doctors, unread, open, records, recentVisits] = await Promise.all([
+  const [upcoming, doctors, unread, open, records, recentVisits, malariaCase] = await Promise.all([
     myUpcomingAppointments(patient.id),
     myDoctors(patient.id),
     unreadMessageCount(patient.id),
@@ -37,6 +40,7 @@ export default async function PatientDashboardPage() {
     }),
     prisma.medicalRecord.count({ where: { patientId: patient.id } }),
     ratableVisits(patient.id, 5),
+    prisma.malariaCase.findFirst({ where: { patientId: patient.id, status: { in: [...OPEN_STATUSES] } }, orderBy: { createdAt: "desc" } }),
   ]);
   const forYou = patient.mainIllness ? await recommendationsFor(patient.mainIllness) : null;
   const promptSince = Date.now() - RATE_PROMPT_DAYS * 24 * 60 * 60 * 1000;
@@ -85,6 +89,22 @@ export default async function PatientDashboardPage() {
           <i className="fa-solid fa-chevron-right" />
         </Link>
       )}
+
+      <Link href="/patient/malaria" className={`card pay-reminder malaria-home${malariaCase ? " open" : ""}`}>
+        <i className="fa-solid fa-mosquito" />
+        <span>
+          {malariaCase ? (
+            <>
+              <strong>Your malaria case: {STATUS_LABEL[malariaCase.status].toLowerCase()}.</strong> See what to do next.
+            </>
+          ) : (
+            <>
+              <strong>Malaria tip:</strong> {tipOfTheWeek().text}
+            </>
+          )}
+        </span>
+        <i className="fa-solid fa-chevron-right" />
+      </Link>
 
       {balance > 0 && (
         <Link href="/patient/billing" className="card pay-reminder">

@@ -26,7 +26,14 @@ const NAV: Partial<Record<Role, NavItem[]>> = {
     { href: "/staff/billing", label: "billing", icon: "fa-file-invoice-dollar" },
     ...COMMON,
   ],
-  [Role.NURSE]: [DASHBOARD, { href: "/staff/schedule", label: "schedule", icon: "fa-calendar-day" }, PATIENTS, FOLLOW_UPS, ...COMMON],
+  [Role.NURSE]: [
+    DASHBOARD,
+    { href: "/staff/schedule", label: "schedule", icon: "fa-calendar-day" },
+    PATIENTS,
+    FOLLOW_UPS,
+    { href: "/staff/malaria", label: "malaria", icon: "fa-mosquito" },
+    ...COMMON,
+  ],
   [Role.PHARMACIST]: [
     DASHBOARD,
     { href: "/staff/prescriptions", label: "prescriptions", icon: "fa-pills" },

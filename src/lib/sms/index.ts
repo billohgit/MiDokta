@@ -22,7 +22,8 @@ export type SmsCategory =
   | "LOGIN_CODE"
   | "CHAT"
   | "PHARMACY_ORDER"
-  | "PATIENT_INVITE";
+  | "PATIENT_INVITE"
+  | "MALARIA";
 
 type SmsInput = {
   userId: string;

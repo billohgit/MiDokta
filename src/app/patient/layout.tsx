@@ -17,6 +17,7 @@ const NAV: NavItem[] = [
   { href: "/patient/pharmacy", label: "pharmacy", icon: "fa-prescription-bottle-medical" },
   { href: "/patient/billing", label: "billsPayments", icon: "fa-file-invoice-dollar" },
   { href: "/patient/chat", label: "messages", icon: "fa-comments" },
+  { href: "/patient/malaria", label: "malaria", icon: "fa-mosquito" },
   { href: "/patient/records", label: "myRecords", icon: "fa-notes-medical" },
   { href: "/patient/settings", label: "myProfile", icon: "fa-gear" },
 ];
