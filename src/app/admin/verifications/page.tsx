@@ -27,7 +27,8 @@ export default async function AdminVerificationsPage() {
   await requireUser(Role.ADMIN);
 
   const pending = await prisma.user.findMany({
-    where: { isActive: false, verificationStatus: { not: null } },
+    // Patients don't need approval: only doctors and staff are verified.
+    where: { isActive: false, verificationStatus: { not: null }, role: { not: "PATIENT" } },
     orderBy: { createdAt: "desc" },
   });
 

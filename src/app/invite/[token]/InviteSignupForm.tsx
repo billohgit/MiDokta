@@ -4,7 +4,6 @@ import Link from "next/link";
 import { type FormEvent, startTransition, useActionState, useState } from "react";
 import type { MobileWallet } from "@prisma/client";
 import { type InviteSignupState, registerFromInvite } from "@/app/actions/invites";
-import ImageCapture from "@/components/ui/ImageCapture";
 import { WALLET_OPTIONS } from "@/components/payments/wallets";
 
 type Props = { token: string; firstName: string; lastName: string; phone: string; fee: string | null };
@@ -12,23 +11,16 @@ type Props = { token: string; firstName: string; lastName: string; phone: string
 /** Registering from a doctor's invitation: the visit is booked as soon as the account exists. */
 export default function InviteSignupForm({ token, firstName, lastName, phone, fee }: Props) {
   const [state, action, pending] = useActionState<InviteSignupState, FormData>(registerFromInvite, { error: null });
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [idCard, setIdCard] = useState<File | null>(null);
-  const [missing, setMissing] = useState<string | null>(null);
   const [wallet, setWallet] = useState<MobileWallet>("ORANGE_MONEY");
 
   // Submitted by hand so a failed attempt keeps what was typed and the captured photos.
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!photo || !idCard) return setMissing(!photo ? "Add your photo." : "Add your identity card.");
-    setMissing(null);
     const formData = new FormData(e.currentTarget);
-    formData.set("photo", photo);
-    formData.set("idCard", idCard);
     startTransition(() => action(formData));
   };
 
-  const error = missing ?? state.error;
+  const error = state.error;
   return (
     <form onSubmit={onSubmit} className="login-form">
       <input type="hidden" name="token" value={token} />
@@ -51,8 +43,6 @@ export default function InviteSignupForm({ token, firstName, lastName, phone, fe
         <span>Email (optional)</span>
         <input type="email" name="email" autoComplete="email" />
       </label>
-      <ImageCapture label="Your photo" hint="A clear photo of your face" mode="face" value={photo} onChange={setPhoto} />
-      <ImageCapture label="Identity card" hint="National ID, passport, driver's licence or voter card" mode="card" value={idCard} onChange={setIdCard} />
       <label className="field">
         <span>Password</span>
         <input type="password" name="password" autoComplete="new-password" minLength={8} required />
@@ -84,9 +74,6 @@ export default function InviteSignupForm({ token, firstName, lastName, phone, fe
           </div>
         </>
       )}
-      <p className="form-note">
-        <i className="fa-solid fa-lock" /> Your ID is stored privately and only administrators can see it.
-      </p>
       <label className="checkbox-line terms-accept">
         <input type="checkbox" name="acceptTerms" required />
         <span>

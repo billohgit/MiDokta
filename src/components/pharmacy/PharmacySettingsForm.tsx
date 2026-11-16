@@ -20,7 +20,7 @@ export type PharmacySettings = {
 };
 
 /** A pharmacist's shop details: where it is, what delivery costs, and where they're paid. */
-export default function PharmacySettingsForm({ pharmacy, platformPercent }: { pharmacy: PharmacySettings | null; platformPercent: string }) {
+export default function PharmacySettingsForm({ pharmacy }: { pharmacy: PharmacySettings | null }) {
   const [wallet, setWallet] = useState<MobileWallet | "">(pharmacy?.payoutWallet ?? "");
   const [saved, setSaved] = useState(false);
   const { busy, error, setError, submitWith } = useServerAction();
@@ -52,7 +52,7 @@ export default function PharmacySettingsForm({ pharmacy, platformPercent }: { ph
       {!pharmacy && (
         <p className="form-note full">
           <i className="fa-solid fa-store" /> Set up your pharmacy to sell to patients on MiDokta. Patients pay online when they order; you&apos;re paid
-          once they confirm they have it. MiDokta keeps {platformPercent}% of the medicines; the delivery fee is all yours.
+          once they confirm they have it. You receive the full price of the medicines and the whole delivery fee.
         </p>
       )}
       <label className="field full">

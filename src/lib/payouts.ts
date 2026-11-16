@@ -18,8 +18,12 @@ import { formatDate } from "@/components/appointments/shared";
  * retrying one can never send the money twice.
  */
 
-/** The platform's share of what patients pay (consultation fees, and the medicines in an order). */
-export const PLATFORM_FEE_RATE = new Prisma.Decimal("0.10");
+/**
+ * The platform's share of what patients pay (consultation fees, and the medicines in an order).
+ * Zero: doctors and pharmacies receive everything patients pay. Orders and consultations still
+ * record a platformFee (0), so a fee could be brought back by changing this rate.
+ */
+export const PLATFORM_FEE_RATE = new Prisma.Decimal("0");
 
 export const platformFeeOf = (amount: Prisma.Decimal) => amount.times(PLATFORM_FEE_RATE).toDecimalPlaces(2);
 

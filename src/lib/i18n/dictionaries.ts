@@ -81,7 +81,7 @@ const en = {
   },
   signup: {
     title: "Create an account",
-    subtitle: "We verify your identity, then an administrator approves your account",
+    subtitle: "Patients can start straight away. Doctors and staff are verified and approved by an administrator.",
     firstName: "First name",
     lastName: "Last name",
     phoneNote: "You can sign in with your email or this phone number.",
@@ -89,6 +89,7 @@ const en = {
     chooseRole: "Choose your role",
     roles: { PATIENT: "Patient", DOCTOR: "Doctor", NURSE: "Nurse", RECEPTIONIST: "Receptionist", PHARMACIST: "Pharmacist" } as Record<(typeof SIGNUP_ROLES)[number], string>,
     photo: "Your photo",
+    photoOptional: "Your photo (optional)",
     photoHint: "A clear photo of your face",
     idCard: "Identity card",
     idCardHint: "National ID, passport, driver's licence or voter card",
@@ -108,8 +109,6 @@ const en = {
     doneTitle: "Account created",
     doneBody: (name: string) =>
       `Thanks, ${name}. We're checking your photo and ID, and an administrator needs to approve your account before you can sign in.`,
-    donePatient: (email: string) =>
-      `Once it's activated, sign in with ${email} and your password, or with a code texted to your phone.`,
     doneOther: (email: string) => `You'll be able to sign in with ${email} once it's activated.`,
     backToSignIn: "Back to Sign In",
   },
@@ -185,7 +184,7 @@ const fr: Dictionary = {
   },
   signup: {
     title: "Créer un compte",
-    subtitle: "Nous vérifions votre identité, puis un administrateur approuve votre compte",
+    subtitle: "Les patients peuvent commencer tout de suite. Les médecins et le personnel sont vérifiés et approuvés par un administrateur.",
     firstName: "Prénom",
     lastName: "Nom",
     phoneNote: "Vous pouvez vous connecter avec votre e-mail ou ce numéro de téléphone.",
@@ -193,6 +192,7 @@ const fr: Dictionary = {
     chooseRole: "Choisissez votre rôle",
     roles: { PATIENT: "Patient", DOCTOR: "Médecin", NURSE: "Infirmier/Infirmière", RECEPTIONIST: "Réceptionniste", PHARMACIST: "Pharmacien" },
     photo: "Votre photo",
+    photoOptional: "Votre photo (facultatif)",
     photoHint: "Une photo nette de votre visage",
     idCard: "Pièce d'identité",
     idCardHint: "Carte d'identité, passeport, permis de conduire ou carte d'électeur",
@@ -212,8 +212,6 @@ const fr: Dictionary = {
     doneTitle: "Compte créé",
     doneBody: (name: string) =>
       `Merci, ${name}. Nous vérifions votre photo et votre pièce d'identité, et un administrateur doit approuver votre compte avant que vous puissiez vous connecter.`,
-    donePatient: (email: string) =>
-      `Une fois activé, connectez-vous avec ${email} et votre mot de passe, ou avec un code envoyé par SMS sur votre téléphone.`,
     doneOther: (email: string) => `Vous pourrez vous connecter avec ${email} une fois votre compte activé.`,
     backToSignIn: "Retour à la connexion",
   },

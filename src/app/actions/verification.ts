@@ -13,7 +13,7 @@ const refresh = () => revalidatePath("/", "layout");
 
 /** A self-service sign-up that hasn't been approved yet. */
 const findPending = (id: string) =>
-  prisma.user.findFirst({ where: { id, isActive: false, verificationStatus: { not: null } } });
+  prisma.user.findFirst({ where: { id, isActive: false, verificationStatus: { not: null }, role: { not: "PATIENT" } } });
 
 export async function approveSignup(id: string): Promise<ActionResult> {
   if (!(await authorize(Role.ADMIN))) return DENIED;

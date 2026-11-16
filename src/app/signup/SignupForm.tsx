@@ -22,16 +22,18 @@ export default function SignupForm({ defaultCountry }: { defaultCountry: string 
   const [idCard, setIdCard] = useState<File | null>(null);
   const [missing, setMissing] = useState<string | null>(null);
   const d = useDictionary();
+  const isPatient = role === "PATIENT";
 
   // Submitted by hand rather than through <form action>: React resets a form after an action,
   // which would wipe the typed fields and the captured images whenever validation fails.
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!photo || !idCard) return setMissing(!photo ? d.signup.addPhoto : d.signup.addIdCard);
+    // Patients need neither: no ID check or approval for them. Doctors and staff need both.
+    if (!isPatient && (!photo || !idCard)) return setMissing(!photo ? d.signup.addPhoto : d.signup.addIdCard);
     setMissing(null);
     const formData = new FormData(e.currentTarget);
-    formData.set("photo", photo);
-    formData.set("idCard", idCard);
+    if (photo) formData.set("photo", photo);
+    if (idCard && !isPatient) formData.set("idCard", idCard);
     startTransition(() => action(formData));
   };
 
@@ -41,7 +43,7 @@ export default function SignupForm({ defaultCountry }: { defaultCountry: string 
         <h1>{d.signup.doneTitle}</h1>
         <p className="login-sub">
           {d.signup.doneBody(v.firstName)}{" "}
-          {v.role === "PATIENT" ? d.signup.donePatient(v.email) : d.signup.doneOther(v.email)}
+          {d.signup.doneOther(v.email)}
         </p>
         <Link href="/login" className="btn btn-primary login-btn">
           {d.signup.backToSignIn}
@@ -109,19 +111,21 @@ export default function SignupForm({ defaultCountry }: { defaultCountry: string 
           </label>
         )}
         <ImageCapture
-          label={d.signup.photo}
+          label={isPatient ? d.signup.photoOptional : d.signup.photo}
           hint={d.signup.photoHint}
           mode="face"
           value={photo}
           onChange={setPhoto}
         />
-        <ImageCapture
-          label={d.signup.idCard}
-          hint={d.signup.idCardHint}
-          mode="card"
-          value={idCard}
-          onChange={setIdCard}
-        />
+        {!isPatient && (
+          <ImageCapture
+            label={d.signup.idCard}
+            hint={d.signup.idCardHint}
+            mode="card"
+            value={idCard}
+            onChange={setIdCard}
+          />
+        )}
         <label className="field">
           <span>{d.login.password}</span>
           <input type="password" name="password" autoComplete="new-password" minLength={8} required />
@@ -130,9 +134,11 @@ export default function SignupForm({ defaultCountry }: { defaultCountry: string 
           <span>{d.signup.confirmPassword}</span>
           <input type="password" name="confirmPassword" autoComplete="new-password" minLength={8} required />
         </label>
-        <p className="form-note">
-          <i className="fa-solid fa-lock" /> {d.signup.idPrivacy}
-        </p>
+        {!isPatient && (
+          <p className="form-note">
+            <i className="fa-solid fa-lock" /> {d.signup.idPrivacy}
+          </p>
+        )}
         <label className="checkbox-line terms-accept">
           <input type="checkbox" name="acceptTerms" required />
           <span>

@@ -31,7 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const admin = await requireUser(Role.ADMIN);
   const [chatUnread, awaitingApproval] = await Promise.all([
     unreadMessageCount(admin.id),
-    prisma.user.count({ where: { isActive: false, verificationStatus: { not: null } } }),
+    prisma.user.count({ where: { isActive: false, verificationStatus: { not: null }, role: { not: "PATIENT" } } }),
   ]);
 
   return (

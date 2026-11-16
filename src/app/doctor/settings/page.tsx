@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { toProfile } from "@/lib/people";
 import { formatMoney } from "@/lib/money";
-import { PLATFORM_FEE_RATE } from "@/lib/payouts";
 import { formatDate } from "@/components/appointments/shared";
 import ProfileSettings from "@/components/settings/ProfileSettings";
 import ConsultationFeeSettings from "@/components/settings/ConsultationFeeSettings";
@@ -26,7 +25,6 @@ export default async function DoctorSettingsPage() {
         fee={doctor.consultationFee?.toString() ?? null}
         wallet={doctor.payoutWallet}
         account={doctor.payoutAccount}
-        platformPercent={PLATFORM_FEE_RATE.times(100).toString()}
         totalPaid={formatMoney((paid._sum.amount ?? new Prisma.Decimal(0)).toString())}
         earnings={payouts.map((p) => ({
           id: p.id,

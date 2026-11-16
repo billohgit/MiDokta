@@ -217,9 +217,13 @@ function imageField(formData: FormData, key: string, label: string): File | stri
 }
 
 /**
- * Self-service sign-up. The account starts inactive: it can't sign in until an admin
- * activates it, so nobody reaches patient records just by filling in this form. The photo
- * and ID card are checked automatically afterwards to help the admin decide.
+ * Self-service sign-up.
+ *
+ * - Patients: no ID card and no approval. The account is active straight away and they're signed
+ *   in; a photo is optional.
+ * - Doctors and staff: a photo and ID card are required, checked automatically, and the account
+ *   stays inactive until an admin approves it, so nobody reaches patient records just by
+ *   filling in this form.
  */
 export async function signup(_prev: SignupState, formData: FormData): Promise<SignupState> {
   const values = {
@@ -239,8 +243,10 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   const role = enumValue(formData, "role", SIGNUP_ROLES);
   const code = COUNTRIES.find((c) => c.iso === values.country)?.code;
   const phone = code && values.phone ? withCountryCode(code, values.phone) : null;
-  const photo = imageField(formData, "photo", "photo");
-  const idCard = imageField(formData, "idCard", "identity card");
+  const isPatient = role === Role.PATIENT;
+  const photoGiven = formData.get("photo") instanceof File && (formData.get("photo") as File).size > 0;
+  const photo = isPatient && !photoGiven ? null : imageField(formData, "photo", "photo");
+  const idCard = isPatient ? null : imageField(formData, "idCard", "identity card");
 
   if (!values.firstName || !values.lastName || !values.email) return fail("First name, last name and email are required.");
   if (!isEmail(values.email)) return fail("Enter a valid email address.");
@@ -261,11 +267,13 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   }
 
   const fileId = randomUUID();
-  const avatarUrl = await saveAvatar(`${fileId}.${AVATAR_TYPES[photo.type]}`, photo);
-  const idCardUrl = await saveIdCard(`${fileId}.${AVATAR_TYPES[idCard.type]}`, idCard).catch(async (e) => {
-    await deleteAvatar(avatarUrl);
-    throw e;
-  });
+  const avatarUrl = photo ? await saveAvatar(`${fileId}.${AVATAR_TYPES[photo.type]}`, photo) : null;
+  const idCardUrl = idCard
+    ? await saveIdCard(`${fileId}.${AVATAR_TYPES[idCard.type]}`, idCard).catch(async (e) => {
+        await deleteAvatar(avatarUrl);
+        throw e;
+      })
+    : null;
 
   let user;
   try {
@@ -276,18 +284,23 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
         email: values.email,
         phone,
         role,
-        mainIllness: role === Role.PATIENT && values.mainIllness ? values.mainIllness : null,
+        mainIllness: isPatient && values.mainIllness ? values.mainIllness : null,
         avatarUrl,
         idCardUrl,
-        verificationStatus: "PENDING",
+        verificationStatus: isPatient ? null : "PENDING",
         password: await hashPassword(password),
-        isActive: false,
+        isActive: isPatient,
       },
     });
   } catch (e) {
     await Promise.all([deleteAvatar(avatarUrl), deleteIdCard(idCardUrl)]);
     if (isUniqueViolation(e)) return fail("An account with that email already exists. Sign in instead.");
     throw e;
+  }
+
+  if (isPatient) {
+    await createSession(user.id);
+    redirect(PORTAL_HOME[Role.PATIENT] ?? "/patient/dashboard");
   }
 
   await notifyRoles([Role.ADMIN], {

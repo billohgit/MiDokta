@@ -26,7 +26,7 @@ export default function TermsPage() {
           <dt>Effective Date</dt>
           <dd>17th October 2026</dd>
           <dt>Last Updated</dt>
-          <dd>30th October 2026</dd>
+          <dd>16th November 2026</dd>
           <dt>Platform</dt>
           <dd>MiDokta Telemedicine Platform</dd>
           <dt>Operator</dt>
@@ -410,8 +410,7 @@ export default function TermsPage() {
           11.8. Where a healthcare professional charges a consultation fee, the patient pays it when booking, and the
           booking request is sent to the healthcare professional only once the fee has been paid. If the healthcare
           professional declines the booking, or the appointment is cancelled by the patient, the healthcare professional
-          or the platform before the consultation is completed, the full fee, including the platform fee described in
-          clause 12.7, is refunded to the mobile money or wallet account the patient gave when booking. Refunds are sent
+          or the platform before the consultation is completed, the full fee is refunded to the mobile money or wallet account the patient gave when booking. Refunds are sent
           automatically but may be subject to payment-provider processing times. Patients are responsible for giving a
           correct refund account.
         </p>
@@ -449,21 +448,19 @@ export default function TermsPage() {
           Terms limits statutory rights relating to unauthorised transactions, defective services or consumer complaints.
         </p>
         <p>
-          12.7. <strong>Platform fee.</strong> Healthcare professionals set their own consultation fees, which are shown to
-          patients before booking. TechHealth Africa retains a platform fee of ten percent (10%) of each consultation fee
-          paid through MiDokta. The platform fee is part of the consultation fee shown to the patient and is not charged
-          to the patient in addition to it.
+          12.7. <strong>No platform fee.</strong> Healthcare professionals set their own consultation fees, which are
+          shown to patients before booking. TechHealth Africa does not take a platform fee or commission from consultation
+          fees paid through MiDokta.
         </p>
         <p>
-          12.8. The remaining ninety percent (90%) of the consultation fee is paid to the healthcare professional, to the
+          12.8. The whole consultation fee is paid to the healthcare professional, to the
           mobile money or wallet account they provide in MiDokta, once the consultation is marked as completed. Charges
-          made by payment providers for collecting the fee and paying the healthcare professional are covered by the
-          platform fee and are not deducted from the healthcare professional&apos;s share. Healthcare professionals are
+          made by payment providers for collecting the fee and paying the healthcare professional are not deducted from
+          the healthcare professional&apos;s payment. Healthcare professionals are
           responsible for providing a correct payout account and for any taxes due on their earnings.
         </p>
         <p>
-          12.9. Where a consultation fee is refunded under clause 11.8, no platform fee is retained and no payment is
-          made to the healthcare professional for that booking. If a payout or refund cannot be completed automatically,
+          12.9. Where a consultation fee is refunded under clause 11.8, no payment is made to the healthcare professional for that booking. If a payout or refund cannot be completed automatically,
           TechHealth Africa will arrange it by other means within a reasonable time.
         </p>
         <p>
@@ -473,9 +470,8 @@ export default function TermsPage() {
           platform and handles payment, and is not the seller. Patients pay for an order online when placing it.
         </p>
         <p>
-          12.11. TechHealth Africa retains a platform fee of ten percent (10%) of the price of the medicines in each
-          completed order; the platform fee is part of the prices shown and is not charged in addition to them. The
-          pharmacy receives the remainder, together with the whole delivery fee, only after the patient confirms they
+          12.11. TechHealth Africa does not take a platform fee or commission on pharmacy orders. The pharmacy receives
+          the full price of the medicines, together with the whole delivery fee, only after the patient confirms they
           have received the order or, if the patient neither confirms nor reports a problem, three (3) days after the
           pharmacy marks it delivered or collected.
         </p>

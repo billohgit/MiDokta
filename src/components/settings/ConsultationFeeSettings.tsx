@@ -20,13 +20,12 @@ type Props = {
   wallet: MobileWallet | null;
   account: string | null;
   /** The percentage the platform keeps, e.g. "10". */
-  platformPercent: string;
   earnings: EarningRow[];
   totalPaid: string;
 };
 
 /** A doctor's consultation fee, where their share is paid, and what they've been paid so far. */
-export default function ConsultationFeeSettings({ fee, wallet, account, platformPercent, earnings, totalPaid }: Props) {
+export default function ConsultationFeeSettings({ fee, wallet, account, earnings, totalPaid }: Props) {
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [saving, startSaving] = useTransition();
   const [chosen, setChosen] = useState<MobileWallet | "">(wallet ?? "");
@@ -48,8 +47,8 @@ export default function ConsultationFeeSettings({ fee, wallet, account, platform
             <h3>Consultation Fee</h3>
           </div>
           <p className="form-note">
-            Patients pay this when they book you, before the request reaches you. Mi Dokta keeps {platformPercent}% and sends you the rest when
-            you complete the visit. If you decline or the visit is cancelled, the patient gets the whole fee back. Leave the fee empty to see
+            Patients pay this when they book you, before the request reaches you. MiDokta sends you the whole fee when you complete the
+            visit. If you decline or the visit is cancelled, the patient gets the whole fee back. Leave the fee empty to see
             patients for free.
           </p>
           <div className="details-grid">

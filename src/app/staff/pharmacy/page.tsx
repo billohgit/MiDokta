@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { formatMoney } from "@/lib/money";
 import { ORDER_ROW_INCLUDE, toOrderRow } from "@/lib/pharmacy";
-import { PLATFORM_FEE_RATE } from "@/lib/payouts";
 import PharmacySettingsForm from "@/components/pharmacy/PharmacySettingsForm";
 import ProductsManager from "@/components/pharmacy/ProductsManager";
 import PharmacyOrdersView from "@/components/pharmacy/PharmacyOrdersView";
@@ -20,7 +19,6 @@ export default async function MyPharmacyPage({ searchParams }: { searchParams: P
   const me = await requireUser(Role.PHARMACIST);
   const { tab: asked, done } = await searchParams;
   const pharmacy = await prisma.pharmacy.findUnique({ where: { ownerId: me.id } });
-  const platformPercent = PLATFORM_FEE_RATE.times(100).toString();
 
   const settings = pharmacy && {
     name: pharmacy.name,
@@ -38,7 +36,7 @@ export default async function MyPharmacyPage({ searchParams }: { searchParams: P
     return (
       <div className="settings">
         <h2 className="section-heading">My Pharmacy</h2>
-        <PharmacySettingsForm pharmacy={null} platformPercent={platformPercent} />
+        <PharmacySettingsForm pharmacy={null} />
       </div>
     );
   }
@@ -134,7 +132,7 @@ export default async function MyPharmacyPage({ searchParams }: { searchParams: P
         />
       )}
       {tab === "scan" && <PrescriptionScanner mode="pharmacist" />}
-      {tab === "settings" && <PharmacySettingsForm pharmacy={settings} platformPercent={platformPercent} />}
+      {tab === "settings" && <PharmacySettingsForm pharmacy={settings} />}
     </div>
   );
 }
