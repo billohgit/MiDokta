@@ -97,7 +97,7 @@ export default async function CaseBoard({ basePath, tab: asked, canScreen, tabHr
                     <span className={`status-pill ${STATUS_CLASS[c.status]}`}>{STATUS_LABEL[c.status]}</span>
                     {delay && <div className="late-note">{delay.text}</div>}
                   </td>
-                  <td>{c.district ?? "—"}</td>
+                  <td>{[c.district, c.country].filter(Boolean).join(", ") || "—"}</td>
                   <td>{c.facilityName ?? "—"}</td>
                   <td>{formatDate(c.createdAt.toISOString())}</td>
                 </tr>

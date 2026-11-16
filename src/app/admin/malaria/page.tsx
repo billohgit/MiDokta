@@ -247,7 +247,7 @@ async function Areas({ period }: { period: MalariaPeriod }) {
       <div className="insight-grid">
         <BarList
           title="Suspected cases by district"
-          subtitle={`Where patients said they were when checked · ${MALARIA_PERIODS[period].toLowerCase()}`}
+          subtitle={`From the patient's location (any country), or the district they chose · ${MALARIA_PERIODS[period].toLowerCase()}`}
           rows={byDistrict
             .filter((d) => d.cases > 0)
             .map((d) => ({ label: d.district, count: d.cases }))}
@@ -400,8 +400,16 @@ async function Facilities({ month }: { month: string }) {
 }
 
 async function Prevention() {
-  const [settings, campaigns] = await Promise.all([
+  const [settings, areas, campaigns] = await Promise.all([
     weeklyTipSettings(),
+    // Every district seen in a check, in any country, for targeting messages.
+    prisma.malariaScreening.findMany({
+      where: { district: { not: null } },
+      distinct: ["district", "country"],
+      select: { district: true, country: true },
+      orderBy: [{ country: "asc" }, { district: "asc" }],
+      take: 300,
+    }),
     prisma.malariaCampaign.findMany({
       orderBy: { createdAt: "desc" },
       take: 20,
@@ -411,7 +419,7 @@ async function Prevention() {
   return (
     <>
       <div className="malaria-detail-grid">
-        <CampaignForm />
+        <CampaignForm areas={areas.map((a) => ({ district: a.district!, country: a.country }))} />
         <WeeklyTipSettings inApp={settings.inApp} sms={settings.sms} />
       </div>
       <h3 className="details-subhead">Messages sent</h3>

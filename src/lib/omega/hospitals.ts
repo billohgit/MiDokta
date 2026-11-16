@@ -17,7 +17,7 @@ export { type LatLng, directionsUrl, isLatLng } from "@/lib/geo";
 
 export type NearbyHospital = {
   name: string;
-  kind: "hospital" | "clinic";
+  kind: "hospital" | "clinic" | "pharmacy";
   lat: number;
   lng: number;
   /** Straight-line distance; the road route is usually longer. */
@@ -57,7 +57,7 @@ type NominatimResult = {
 };
 
 /** One amenity type within a box `spanDeg` degrees either side of the patient. Nominatim returns at most 40. */
-async function nominatim(at: LatLng, amenity: "hospital" | "clinic", spanDeg: number): Promise<Place[]> {
+async function nominatim(at: LatLng, amenity: "hospital" | "clinic" | "pharmacy", spanDeg: number): Promise<Place[]> {
   const params = new URLSearchParams({
     format: "jsonv2",
     amenity,
@@ -105,8 +105,7 @@ async function searchNominatim(at: LatLng, includeClinics: boolean): Promise<Pla
 
 type OverpassElement = { lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> };
 
-async function searchOverpass(at: LatLng, includeClinics: boolean): Promise<Place[]> {
-  const amenity = includeClinics ? "^(hospital|clinic)$" : "^hospital$";
+async function searchOverpass(at: LatLng, includeClinics: boolean, amenity = includeClinics ? "^(hospital|clinic)$" : "^hospital$"): Promise<Place[]> {
   const query = `[out:json][timeout:10];nwr["amenity"~"${amenity}"](around:${SEARCH_RADIUS_KM * 1000},${at.lat},${at.lng});out center tags 80;`;
   const res = await fetch(OVERPASS_URL, {
     method: "POST",
@@ -128,7 +127,7 @@ async function searchOverpass(at: LatLng, includeClinics: boolean): Promise<Plac
     return [
       {
         name,
-        kind: tags.amenity === "clinic" ? ("clinic" as const) : ("hospital" as const),
+        kind: tags.amenity === "clinic" ? ("clinic" as const) : tags.amenity === "pharmacy" ? ("pharmacy" as const) : ("hospital" as const),
         lat,
         lng,
         address: [street, tags["addr:city"]].filter(Boolean).join(", ") || null,
@@ -206,4 +205,58 @@ export async function nearestHospitals(at: LatLng, includeClinics: boolean): Pro
     .slice(0, MAX_RESULTS);
 
   return { hospitals, error: publicResult.error };
+}
+
+// ---- Pharmacies and areas, for the malaria program ---------------------------------------------------
+
+const pharmacyCache = new Map<string, { at: number; places: Place[] }>();
+
+/** Public pharmacies near the patient from OpenStreetMap, nearest first (Mi Dokta's own are added by the caller). */
+export async function nearbyMapPharmacies(at: LatLng): Promise<NearbyHospital[]> {
+  const key = `${at.lat.toFixed(2)},${at.lng.toFixed(2)}`;
+  const cached = pharmacyCache.get(key);
+  let places = cached && Date.now() - cached.at < CACHE_MS ? cached.places : null;
+  if (!places) {
+    try {
+      places = await nominatim(at, "pharmacy", 0.05);
+      if (places.length < 3) places = await nominatim(at, "pharmacy", 0.15);
+    } catch (e) {
+      console.error("Pharmacy search (Nominatim):", e);
+      places = await searchOverpass(at, false, "^pharmacy$").catch(() => []);
+    }
+    pharmacyCache.set(key, { at: Date.now(), places });
+  }
+  return places
+    .map((p) => ({ ...p, distanceKm: Math.round(distanceKm(at, p) * 10) / 10, directionsUrl: directionsUrl(at, p) }))
+    .filter((p) => p.distanceKm <= SEARCH_RADIUS_KM)
+    .sort((a, b) => a.distanceKm - b.distanceKm)
+    .slice(0, MAX_RESULTS);
+}
+
+export type Area = { country: string; countryCode: string; district: string | null };
+const areaCache = new Map<string, Area | null>();
+
+/**
+ * The country and district at a position, in any country, from OpenStreetMap. "District" is the
+ * level below the region where the map has one (a Ghanaian municipal district, a Nigerian LGA), else
+ * the region itself (Sierra Leone's districts are stored at that level).
+ */
+export async function areaAt(at: LatLng): Promise<Area | null> {
+  const key = `${at.lat.toFixed(2)},${at.lng.toFixed(2)}`;
+  if (areaCache.has(key)) return areaCache.get(key)!;
+  const url = NOMINATIM_URL.replace(/\/search$/, "/reverse");
+  const params = new URLSearchParams({ format: "jsonv2", lat: String(at.lat), lon: String(at.lng), zoom: "10", addressdetails: "1" });
+  try {
+    const res = await fetch(`${url}?${params}`, { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(6_000), cache: "no-store" });
+    if (!res.ok) throw new Error(`Nominatim reverse answered ${res.status}`);
+    const a = ((await res.json()) as { address?: Record<string, string> }).address ?? {};
+    if (!a.country) return null;
+    const raw = a.county ?? a.state_district ?? a.district ?? a.state ?? a.region ?? null;
+    const area = { country: a.country, countryCode: (a.country_code ?? "").toUpperCase(), district: raw ? raw.replace(/\s+District$/i, "").trim() : null };
+    areaCache.set(key, area);
+    return area;
+  } catch (e) {
+    console.error("Area lookup:", e);
+    return null;
+  }
 }

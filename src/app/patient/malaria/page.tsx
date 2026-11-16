@@ -18,7 +18,7 @@ export default async function PatientMalariaPage() {
       where: { patientId: patient.id },
       orderBy: { createdAt: "desc" },
       take: 10,
-      include: { pharmacy: true, doses: true, planApprovedBy: { select: { lastName: true } } },
+      include: { doses: true, planApprovedBy: { select: { lastName: true } } },
     }),
     prisma.malariaScreening.findMany({ where: { patientId: patient.id }, orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
@@ -104,13 +104,13 @@ export default async function PatientMalariaPage() {
   );
 }
 
-type Case = Prisma.MalariaCaseGetPayload<{ include: { pharmacy: true; doses: true; planApprovedBy: { select: { lastName: true } } } }>;
+type Case = Prisma.MalariaCaseGetPayload<{ include: { doses: true; planApprovedBy: { select: { lastName: true } } } }>;
 
 function OpenCase({ c }: { c: Case }) {
   const day = treatmentDay(c);
   const tookToday = c.doses.some((d) => d.day === day);
   const facilityDirections = c.facilityLat != null && c.facilityLng != null ? directionsUrl(null, { lat: c.facilityLat, lng: c.facilityLng }) : null;
-  const pharmacyDirections = c.pharmacy?.latitude != null && c.pharmacy.longitude != null ? directionsUrl(null, { lat: c.pharmacy.latitude, lng: c.pharmacy.longitude }) : null;
+  const pharmacyDirections = c.pharmacyLat != null && c.pharmacyLng != null ? directionsUrl(null, { lat: c.pharmacyLat, lng: c.pharmacyLng }) : null;
 
   return (
     <section className={`card malaria-case${c.urgency === "EMERGENCY" ? " emergency" : ""}`}>
@@ -157,17 +157,34 @@ function OpenCase({ c }: { c: Case }) {
           <p className="malaria-plan">
             <strong>Your treatment{c.planApprovedBy ? `, approved by Dr. ${c.planApprovedBy.lastName}` : ""}:</strong> {c.planText}
           </p>
-          {c.pharmacy && (
+          {c.pharmacyName && (
             <div className="malaria-place">
               <div>
-                <strong>{c.pharmacy.name}</strong>
-                <small> · pharmacy on MiDokta{c.pharmacy.address ? ` · ${c.pharmacy.address}` : ""}</small>
+                <strong>{c.pharmacyName}</strong>
+                <small>
+                  {" "}
+                  · {c.pharmacyId ? "pharmacy on MiDokta" : "nearest pharmacy"}
+                  {c.pharmacyDistanceKm != null ? ` · ${formatDistance(c.pharmacyDistanceKm)} away` : ""}
+                  {c.pharmacyAddress ? ` · ${c.pharmacyAddress}` : ""}
+                </small>
               </div>
-              {pharmacyDirections && (
-                <a className="btn btn-outline btn-sm" href={pharmacyDirections} target="_blank" rel="noopener noreferrer">
-                  Directions
-                </a>
-              )}
+              <div className="omega-hospital-actions">
+                {c.pharmacyPhone && (
+                  <a className="icon-btn" href={`tel:${c.pharmacyPhone.replace(/[^\d+]/g, "")}`} aria-label="Call the pharmacy">
+                    <i className="fa-solid fa-phone" />
+                  </a>
+                )}
+                {c.pharmacyId && (
+                  <a className="btn btn-primary btn-sm" href="/patient/pharmacy">
+                    Order in the app
+                  </a>
+                )}
+                {pharmacyDirections && (
+                  <a className="btn btn-outline btn-sm" href={pharmacyDirections} target="_blank" rel="noopener noreferrer">
+                    Directions
+                  </a>
+                )}
+              </div>
             </div>
           )}
           <ol className="malaria-days" aria-label="Treatment days">

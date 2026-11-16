@@ -14,6 +14,10 @@ export type MalariaPeriod = keyof typeof MALARIA_PERIODS;
 const DAY = 86400_000;
 const UNKNOWN = "Not given";
 
+/** "Bo, Sierra Leone", "Shomolu, Nigeria": districts are grouped within their country. */
+export const areaLabel = (a: { district: string | null; country: string | null }) =>
+  a.district ? [a.district, a.country].filter(Boolean).join(", ") : a.country ? `${UNKNOWN} (${a.country})` : UNKNOWN;
+
 const pct = (n: number, of: number) => (of > 0 ? Math.round((n / of) * 100) : null);
 const median = (xs: number[]) => {
   if (!xs.length) return null;
@@ -40,9 +44,9 @@ export async function malariaOverview(period: MalariaPeriod, now = new Date()) {
   const range = since ? { gte: since } : undefined;
 
   const [screenings, cases, previousCases] = await Promise.all([
-    prisma.malariaScreening.findMany({ where: { createdAt: range }, select: { outcome: true, district: true, forWhom: true, createdAt: true } }),
+    prisma.malariaScreening.findMany({ where: { createdAt: range }, select: { outcome: true, district: true, country: true, forWhom: true, createdAt: true } }),
     prisma.malariaCase.findMany({ where: { createdAt: range } }),
-    since && before ? prisma.malariaCase.findMany({ where: { createdAt: { gte: before, lt: since } }, select: { district: true } }) : Promise.resolve([]),
+    since && before ? prisma.malariaCase.findMany({ where: { createdAt: { gte: before, lt: since } }, select: { district: true, country: true } }) : Promise.resolve([]),
   ]);
 
   const t = tally(cases);
@@ -63,11 +67,11 @@ export async function malariaOverview(period: MalariaPeriod, now = new Date()) {
 
   // Geography: by district, with the previous period for the trend.
   const districts = new Map<string, Counted[]>();
-  for (const c of cases) districts.set(c.district ?? UNKNOWN, [...(districts.get(c.district ?? UNKNOWN) ?? []), c]);
+  for (const c of cases) districts.set(areaLabel(c), [...(districts.get(areaLabel(c)) ?? []), c]);
   const prevByDistrict = new Map<string, number>();
-  for (const c of previousCases) prevByDistrict.set(c.district ?? UNKNOWN, (prevByDistrict.get(c.district ?? UNKNOWN) ?? 0) + 1);
+  for (const c of previousCases) prevByDistrict.set(areaLabel(c), (prevByDistrict.get(areaLabel(c)) ?? 0) + 1);
   const checksByDistrict = new Map<string, number>();
-  for (const s of screenings) checksByDistrict.set(s.district ?? UNKNOWN, (checksByDistrict.get(s.district ?? UNKNOWN) ?? 0) + 1);
+  for (const s of screenings) checksByDistrict.set(areaLabel(s), (checksByDistrict.get(areaLabel(s)) ?? 0) + 1);
   const byDistrict = [...new Set([...districts.keys(), ...checksByDistrict.keys()])]
     .map((d) => ({ district: d, checks: checksByDistrict.get(d) ?? 0, ...tally(districts.get(d) ?? []), previous: since ? (prevByDistrict.get(d) ?? 0) : null }))
     .sort((a, b) => b.cases - a.cases || b.checks - a.checks);

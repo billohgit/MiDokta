@@ -21,6 +21,7 @@ import {
   sendCampaign,
 } from "@/lib/malaria/cases";
 import { DANGER_SIGNS, FOR_WHOM, type ForWhom, SYMPTOMS } from "@/lib/malaria/screening";
+import { COUNTRIES } from "@/lib/countries";
 
 const refresh = (id?: string) => {
   for (const base of ["/patient", "/doctor", "/staff", "/admin"]) {
@@ -148,7 +149,8 @@ export async function screenForPatient(formData: FormData): Promise<ActionResult
   const answers = Object.fromEntries(SYMPTOMS.map((q) => [q.id, checkbox(formData, `s_${q.id}`)]));
   const dangerSigns = DANGER_SIGNS.filter((d) => checkbox(formData, `d_${d.id}`)).map((d) => d.id);
   const forWhom = FOR_WHOM.find((f) => f.id === text(formData, "forWhom"))?.id ?? ("SELF" as ForWhom);
-  const r = await screenPatient(patient, { answers, dangerSigns, forWhom, district: text(formData, "district"), location: null }, worker);
+  const country = COUNTRIES.find((c) => c.iso === text(formData, "country"))?.name ?? null;
+  const r = await screenPatient(patient, { answers, dangerSigns, forWhom, country, district: text(formData, "district"), location: null }, worker);
   refresh(r.caseId ?? undefined);
   return { ok: true, id: r.caseId ?? undefined, outcome: r.outcome, score: r.score };
 }

@@ -1115,6 +1115,8 @@ model MalariaScreening {
   outcome     MalariaOutcome
   /// SELF, CHILD (under five) or PREGNANT.
   forWhom     String         @default("SELF")
+  /// From the patient's location when shared (any country), else what they chose.
+  country     String?
   district    String?
   latitude    Float?
   longitude   Float?
@@ -1138,6 +1140,7 @@ model MalariaCase {
   openedBy           User?             @relation("MalariaOpenedBy", fields: [openedById], references: [id], onDelete: SetNull)
   status             MalariaCaseStatus @default(REFERRED)
   urgency            Urgency           @default(URGENT)
+  country            String?
   district           String?
   latitude           Float?
   longitude          Float?
@@ -1148,9 +1151,15 @@ model MalariaCase {
   facilityLng        Float?
   facilityDistanceKm Float?
   facilityPhone      String?
-  /// The nearest MiDokta pharmacy, for the medicine once it's prescribed.
+  /// The nearest pharmacy for the medicine once it's prescribed: on MiDokta (pharmacyId) or from the map.
   pharmacyId         String?
   pharmacy           Pharmacy?         @relation(fields: [pharmacyId], references: [id], onDelete: SetNull)
+  pharmacyName       String?
+  pharmacyAddress    String?
+  pharmacyPhone      String?
+  pharmacyLat        Float?
+  pharmacyLng        Float?
+  pharmacyDistanceKm Float?
   // Test result, recorded by a doctor or nurse.
   testType           MalariaTestType?
   testPositive       Boolean?
@@ -1186,7 +1195,7 @@ model MalariaCase {
   @@index([status])
   @@index([patientId])
   @@index([createdAt])
-  @@index([district])
+  @@index([country, district])
 }
 
 /** The patient ticking off a treatment day. */

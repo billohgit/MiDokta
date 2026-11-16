@@ -20,7 +20,6 @@ export default async function CaseDetail({ id, user, basePath }: { id: string; u
     include: {
       patient: true,
       screening: true,
-      pharmacy: true,
       doses: true,
       testedBy: true,
       planDraftedBy: true,
@@ -74,16 +73,20 @@ export default async function CaseDetail({ id, user, basePath }: { id: string; u
               </>
             )}
             <dt>District</dt>
-            <dd>{c.district ?? "Not given"}</dd>
+            <dd>{[c.district, c.country].filter(Boolean).join(", ") || "Not given"}</dd>
             <dt>Referred to</dt>
             <dd>
               {c.facilityName ?? "Nearest health centre"}
               {c.facilityDistanceKm != null ? ` (${formatDistance(c.facilityDistanceKm)} from the patient)` : ""}
             </dd>
-            {c.pharmacy && (
+            {c.pharmacyName && (
               <>
                 <dt>Pharmacy</dt>
-                <dd>{c.pharmacy.name}</dd>
+                <dd>
+                  {c.pharmacyName}
+                  {c.pharmacyId ? " (on MiDokta)" : ""}
+                  {c.pharmacyDistanceKm != null ? ` · ${formatDistance(c.pharmacyDistanceKm)} from the patient` : ""}
+                </dd>
               </>
             )}
           </dl>

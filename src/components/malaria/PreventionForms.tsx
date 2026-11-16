@@ -6,7 +6,12 @@ import useServerAction from "@/components/ui/useServerAction";
 import { PREVENTION_TIPS, SL_DISTRICTS } from "@/lib/malaria/screening";
 
 /** An admin sends a malaria prevention message now, in the app and/or by SMS. */
-export function CampaignForm() {
+/** `areas`: districts seen in malaria checks (any country); Sierra Leone's are always offered. */
+export function CampaignForm({ areas }: { areas: { district: string; country: string | null }[] }) {
+  const options = [
+    ...areas.map((a) => ({ value: a.district, label: [a.district, a.country].filter(Boolean).join(", ") })),
+    ...SL_DISTRICTS.filter((d) => !areas.some((a) => a.district === d)).map((d) => ({ value: d, label: `${d}, Sierra Leone` })),
+  ];
   const { busy, error, submitWith } = useServerAction();
   const [body, setBody] = useState("");
   const [sent, setSent] = useState<number | null>(null);
@@ -46,9 +51,9 @@ export function CampaignForm() {
           <span>Patients</span>
           <select name="district" defaultValue="">
             <option value="">All patients</option>
-            {SL_DISTRICTS.map((d) => (
-              <option key={d} value={d}>
-                In {d}
+            {options.map((o) => (
+              <option key={o.label} value={o.value}>
+                In {o.label}
               </option>
             ))}
           </select>

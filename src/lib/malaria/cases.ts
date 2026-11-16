@@ -6,7 +6,7 @@ import { PORTAL_TOKEN, notifyRoles, notifyUsers, notifyUsersOnce } from "@/lib/n
 import { queueSms } from "@/lib/sms";
 import { SMS_BRAND } from "@/lib/sms/templates";
 import { type LatLng, directionsUrl, distanceKm, formatDistance } from "@/lib/geo";
-import { nearestHospitals } from "@/lib/omega/hospitals";
+import { areaAt, nearbyMapPharmacies, nearestHospitals } from "@/lib/omega/hospitals";
 import { FOR_WHOM_LABEL } from "@/components/malaria/shared";
 import { type ForWhom, type Outcome, PREVENTION_TIPS, SL_DISTRICTS, scoreScreening, tipOfTheWeek } from "./screening";
 
@@ -70,9 +70,10 @@ export type Facility = {
   lng: number | null;
 };
 
-export type PharmacyOption = Facility & { id: string };
+/** A pharmacy on MiDokta has an id; one from the public map doesn't. */
+export type PharmacyOption = Facility & { id: string | null };
 
-/** The nearest hospitals and clinics (hospitals only for danger signs), and the nearest MiDokta pharmacies. */
+/** The nearest hospitals and clinics (hospitals only for danger signs), and the nearest pharmacies: MiDokta's and the map's. */
 export async function findCare(location: LatLng | null, hospitalsOnly: boolean): Promise<{ facilities: Facility[]; pharmacies: PharmacyOption[] }> {
   let facilities: Facility[] = [];
   if (location) {
@@ -105,8 +106,11 @@ export async function findCare(location: LatLng | null, hospitalsOnly: boolean):
     }));
   }
 
-  const shops = await prisma.pharmacy.findMany({ where: { isActive: true }, take: 50 });
-  const pharmacies: PharmacyOption[] = shops
+  const [shops, mapShops] = await Promise.all([
+    prisma.pharmacy.findMany({ where: { isActive: true }, take: 50 }),
+    location ? nearbyMapPharmacies(location).catch(() => []) : Promise.resolve([]),
+  ]);
+  const ours: PharmacyOption[] = shops
     .map((p) => {
       const at = p.latitude != null && p.longitude != null ? { lat: p.latitude, lng: p.longitude } : null;
       return {
@@ -121,13 +125,23 @@ export async function findCare(location: LatLng | null, hospitalsOnly: boolean):
         lat: at?.lat ?? null,
         lng: at?.lng ?? null,
       };
-    })
-    .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
-    .slice(0, 3);
+    });
+  // A map pharmacy that is also on MiDokta (same name, close by) is shown once, as MiDokta's.
+  const fromMap: PharmacyOption[] = mapShops
+    .filter((m) => !ours.some((o) => o.lat != null && o.lng != null && distanceKm(o as LatLng, m) < 0.3 && o.name.toLowerCase() === m.name.toLowerCase()))
+    .map((m) => ({ id: null, name: m.name, kind: "pharmacy", distanceKm: m.distanceKm, address: m.address, phone: m.phone, directionsUrl: m.directionsUrl, onMiDokta: false, lat: m.lat, lng: m.lng }));
+  const pharmacies = [...ours, ...fromMap].sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)).slice(0, 4);
   return { facilities: facilities.slice(0, 4), pharmacies };
 }
 
 const where = (f: Facility | null) => (f ? `${f.name}${f.distanceKm != null ? ` (${formatDistance(f.distanceKm)} away)` : ""}` : "the nearest health centre");
+
+/** "Bo District" and "bo" both become "Bo" for Sierra Leone's districts; other names are kept as given. */
+export function cleanDistrict(d: string | null | undefined): string | null {
+  const name = d?.replace(/\s+District$/i, "").trim().slice(0, 80);
+  if (!name) return null;
+  return SL_DISTRICTS.find((x) => x.toLowerCase() === name.toLowerCase()) ?? name;
+}
 
 // ---- Screening -------------------------------------------------------------------------------------
 
@@ -135,6 +149,8 @@ export type ScreeningInput = {
   answers: Record<string, boolean>;
   dangerSigns: string[];
   forWhom: ForWhom;
+  /** What the patient chose; replaced by the area at their location when it's shared. */
+  country: string | null;
   district: string | null;
   location: LatLng | null;
 };
@@ -153,7 +169,10 @@ export type ScreeningResult = {
 /** Scores a check, and for a suspected case refers the patient and tells the health workers. */
 export async function screenPatient(patient: User, input: ScreeningInput, actor: User = patient): Promise<ScreeningResult> {
   const { score, outcome } = scoreScreening(input.answers, input.dangerSigns);
-  const district = input.district && (SL_DISTRICTS as readonly string[]).includes(input.district) ? input.district : (input.district?.slice(0, 60) ?? null);
+  // Where they are: from their location in any country, else what they chose.
+  const area = input.location ? await areaAt(input.location) : null;
+  const country = area?.country ?? input.country?.slice(0, 60) ?? null;
+  const district = cleanDistrict(area?.district ?? input.district);
   const screening = await prisma.malariaScreening.create({
     data: {
       patientId: patient.id,
@@ -162,6 +181,7 @@ export async function screenPatient(patient: User, input: ScreeningInput, actor:
       dangerSigns: input.dangerSigns,
       outcome,
       forWhom: input.forWhom,
+      country,
       district,
       latitude: input.location?.lat,
       longitude: input.location?.lng,
@@ -219,6 +239,7 @@ export async function screenPatient(patient: User, input: ScreeningInput, actor:
         screeningId: screening.id,
         openedById: actor.id === patient.id ? null : actor.id,
         urgency,
+        country,
         district,
         latitude: input.location?.lat,
         longitude: input.location?.lng,
@@ -228,7 +249,13 @@ export async function screenPatient(patient: User, input: ScreeningInput, actor:
         facilityLat: facility?.lat,
         facilityLng: facility?.lng,
         facilityPhone: facility?.phone,
-        pharmacyId: pharmacies[0]?.id,
+        pharmacyId: pharmacies[0]?.id ?? null,
+        pharmacyName: pharmacies[0]?.name,
+        pharmacyAddress: pharmacies[0]?.address,
+        pharmacyPhone: pharmacies[0]?.phone,
+        pharmacyLat: pharmacies[0]?.lat,
+        pharmacyLng: pharmacies[0]?.lng,
+        pharmacyDistanceKm: pharmacies[0]?.distanceKm,
       },
     });
     await logEvent(
@@ -322,7 +349,7 @@ export async function savePlan(c: MalariaCase, actor: User, p: { text: string; d
   return true;
 }
 
-export async function approvePlan(c: Pick<MalariaCase, "id" | "patientId" | "planText" | "planDays" | "dosesPerDay" | "pharmacyId">, doctor: User) {
+export async function approvePlan(c: Pick<MalariaCase, "id" | "patientId" | "planText" | "planDays" | "dosesPerDay" | "pharmacyName" | "pharmacyAddress">, doctor: User) {
   if (doctor.role !== Role.DOCTOR || !c.planText || !c.planDays) return false;
   const start = dayStart(new Date());
   const ok = await move(c.id, ["POSITIVE"], {
@@ -334,11 +361,10 @@ export async function approvePlan(c: Pick<MalariaCase, "id" | "patientId" | "pla
   });
   if (!ok) return false;
   await logEvent(c.id, "STATUS", `Treatment plan approved by Dr. ${doctor.lastName}. Treatment starts today, for ${c.planDays} days.`, doctor.id);
-  const pharmacy = c.pharmacyId ? await prisma.pharmacy.findUnique({ where: { id: c.pharmacyId } }) : null;
   await tellPatient(
     c.patientId,
     "Your malaria treatment plan",
-    `Your malaria treatment, approved by Dr. ${doctor.lastName}: ${c.planText}${pharmacy ? ` You can get it at ${pharmacy.name}${pharmacy.address ? `, ${pharmacy.address}` : ""}.` : ""} Take every dose for all ${c.planDays} days, even if you feel better.`,
+    `Your malaria treatment, approved by Dr. ${doctor.lastName}: ${c.planText}${c.pharmacyName ? ` You can get it at ${c.pharmacyName}${c.pharmacyAddress ? `, ${c.pharmacyAddress}` : ""}.` : ""} Take every dose for all ${c.planDays} days, even if you feel better.`,
   );
   return true;
 }

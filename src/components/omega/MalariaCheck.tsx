@@ -4,16 +4,19 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatDistance } from "@/lib/geo";
 import { DANGER_SIGNS, FOR_WHOM, type ForWhom, SL_DISTRICTS, SYMPTOMS } from "@/lib/malaria/screening";
+import { COUNTRIES } from "@/lib/countries";
 
 /**
  * Omega's malaria check, asked inside the Omega chat: who it's for, eight yes/no symptom questions,
- * the danger signs, and the district. The server scores the answers and, for a suspected case,
- * refers the patient to the nearest hospital or clinic (see src/lib/malaria/cases.ts).
+ * the danger signs, and where they are: their location (any country: the server works out the
+ * district and finds the nearest clinic and pharmacy) or a country and district they choose. The
+ * server scores the answers and, for a suspected case, refers the patient (src/lib/malaria/cases.ts).
  */
 
 type Place = { name: string; kind: string; distanceKm: number | null; address: string | null; phone: string | null; directionsUrl: string | null; onMiDokta: boolean; emergency?: boolean };
 type Result = { outcome: "LOW" | "SUSPECTED" | "DANGER"; score: number; caseId: string | null; existingCase: boolean; advice: string; facilities: Place[]; pharmacies: Place[] };
 type LatLng = { lat: number; lng: number };
+type Where = { mode: "location" } | { mode: "chosen"; country: string; district: string } | { mode: "skip" };
 
 type Props = {
   /** Reads Omega's questions aloud when voice is on. */
@@ -29,14 +32,17 @@ export default function MalariaCheck({ say, getPosition, onClose }: Props) {
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const [danger, setDanger] = useState<string[] | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
-  const [district, setDistrict] = useState<string | null>(null);
+  const [where, setWhere] = useState<Where | null>(null);
+  const [country, setCountry] = useState("SL");
+  const [typed, setTyped] = useState("");
+  const [noLocation, setNoLocation] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const end = useRef<HTMLDivElement>(null);
 
   const answered = SYMPTOMS.filter((q) => q.id in answers).length;
-  const current = !forWhom ? "forWhom" : answered < SYMPTOMS.length ? SYMPTOMS[answered].id : danger === null ? "danger" : district === null ? "district" : "done";
+  const current = !forWhom ? "forWhom" : answered < SYMPTOMS.length ? SYMPTOMS[answered].id : danger === null ? "danger" : where === null ? "district" : "done";
   const child = forWhom === "CHILD";
   // "Do you have a headache?" -> "Does your child have a headache?" ("your" first, so "your child" survives).
   const reword = (t: string) =>
@@ -48,7 +54,7 @@ export default function MalariaCheck({ say, getPosition, onClose }: Props) {
       : current === "danger"
         ? `Does ${child ? "your child" : "anyone"} have any of these danger signs now? Tap all that apply.`
         : current === "district"
-          ? "Last question: which district are you in?"
+          ? "Last question: where are you? Your location finds the nearest clinic and pharmacy, in any country."
           : current === "done"
             ? null
             : reword(SYMPTOMS.find((q) => q.id === current)!.text);
@@ -68,14 +74,31 @@ export default function MalariaCheck({ say, getPosition, onClose }: Props) {
     if (current !== "done" || result || status) return;
     (async () => {
       setError(null);
-      setStatus("Finding the nearest health centres...");
-      const location = await getPosition();
-      setStatus("Checking your answers...");
+      let location: LatLng | null = null;
+      if (where?.mode === "location") {
+        setStatus("Finding where you are...");
+        location = await getPosition();
+        if (!location) {
+          // Permission refused or no signal: ask for the country and district instead.
+          setStatus(null);
+          setNoLocation(true);
+          setWhere(null);
+          return;
+        }
+      }
+      setStatus("Checking your answers and finding the nearest care...");
       try {
         const res = await fetch("/api/malaria/screen", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ answers, dangerSigns: danger, forWhom, district: district || null, location }),
+          body: JSON.stringify({
+            answers,
+            dangerSigns: danger,
+            forWhom,
+            country: where?.mode === "chosen" ? where.country : null,
+            district: where?.mode === "chosen" ? where.district : null,
+            location,
+          }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error ?? "The check couldn't be saved. Please try again.");
@@ -93,8 +116,11 @@ export default function MalariaCheck({ say, getPosition, onClose }: Props) {
   const retry = () => {
     setError(null);
     setResult(null);
-    setDistrict(null);
+    setWhere(null);
   };
+
+  const countryName = (iso: string) => COUNTRIES.find((c) => c.iso === iso)?.name ?? iso;
+  const answeredWhere = !where ? "" : where.mode === "location" ? "Use my location" : where.mode === "skip" ? "Skipped" : `${where.district}, ${countryName(where.country)}`;
 
   // The number of the question on screen.
   const step = (forWhom ? 1 : 0) + answered + (danger !== null ? 1 : 0) + 1;
@@ -120,10 +146,10 @@ export default function MalariaCheck({ say, getPosition, onClose }: Props) {
           <div className="omega-msg user">{danger.length ? danger.map((d) => DANGER_SIGNS.find((s) => s.id === d)?.label).join(", ") : "None of these"}</div>
         </>
       )}
-      {district !== null && (
+      {where !== null && (
         <>
-          <div className="omega-msg assistant">Which district are you in?</div>
-          <div className="omega-msg user">{district || "Skipped"}</div>
+          <div className="omega-msg assistant">Where are you?</div>
+          <div className="omega-msg user">{answeredWhere}</div>
         </>
       )}
 
@@ -174,18 +200,51 @@ export default function MalariaCheck({ say, getPosition, onClose }: Props) {
             </>
           )}
           {current === "district" && (
-            <div className="malaria-options">
-              <select aria-label="District" defaultValue="" onChange={(e) => e.target.value && setDistrict(e.target.value)}>
-                <option value="">Choose your district</option>
-                {SL_DISTRICTS.map((d) => (
-                  <option key={d}>{d}</option>
-                ))}
-                <option>Outside Sierra Leone</option>
-              </select>
-              <button type="button" className="omega-chip" onClick={() => setDistrict("")}>
-                Skip
-              </button>
-            </div>
+            <>
+              {noLocation ? (
+                <p className="omega-note">Your location isn&apos;t available. Choose your country and district instead.</p>
+              ) : (
+                <div className="malaria-options">
+                  <button type="button" className="btn btn-primary btn-sm" onClick={() => setWhere({ mode: "location" })}>
+                    <i className="fa-solid fa-location-crosshairs btn-icon" /> Use my location
+                  </button>
+                  <span className="omega-note">or choose:</span>
+                </div>
+              )}
+              <form
+                className="malaria-where"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (typed.trim()) setWhere({ mode: "chosen", country, district: typed.trim() });
+                }}
+              >
+                <select aria-label="Country" value={country} onChange={(e) => (setCountry(e.target.value), setTyped(""))}>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.iso} value={c.iso}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {country === "SL" ? (
+                  <select aria-label="District" value={typed} onChange={(e) => setTyped(e.target.value)}>
+                    <option value="">Choose your district</option>
+                    {SL_DISTRICTS.map((d) => (
+                      <option key={d}>{d}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input aria-label="District, region or town" placeholder="District, region or town" value={typed} maxLength={80} onChange={(e) => setTyped(e.target.value)} />
+                )}
+                <div className="malaria-options">
+                  <button type="submit" className="omega-chip" disabled={!typed.trim()}>
+                    Continue
+                  </button>
+                  <button type="button" className="omega-chip" onClick={() => setWhere({ mode: "skip" })}>
+                    Skip
+                  </button>
+                </div>
+              </form>
+            </>
           )}
         </div>
       )}
@@ -219,7 +278,7 @@ export default function MalariaCheck({ say, getPosition, onClose }: Props) {
           )}
           {result.pharmacies.length > 0 && result.outcome !== "LOW" && (
             <>
-              <h4>Pharmacies on MiDokta, for the medicine</h4>
+              <h4>Nearest pharmacies, for the medicine</h4>
               <PlaceList places={result.pharmacies} />
             </>
           )}

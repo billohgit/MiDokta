@@ -6,6 +6,7 @@ import { screenForPatient } from "@/app/actions/malaria";
 import Modal from "@/components/ui/Modal";
 import useServerAction from "@/components/ui/useServerAction";
 import { DANGER_SIGNS, FOR_WHOM, SL_DISTRICTS, SUSPECT_THRESHOLD, SYMPTOMS } from "@/lib/malaria/screening";
+import { COUNTRIES } from "@/lib/countries";
 
 type Patient = { id: string; name: string; phone: string | null; district: string | null };
 type Result = { id?: string; outcome?: string; score?: number };
@@ -75,13 +76,23 @@ export default function ScreenPatientButton({ basePath, patients }: { basePath: 
                 </select>
               </label>
               <label className="field">
-                <span>District</span>
-                <select name="district" key={district} defaultValue={(SL_DISTRICTS as readonly string[]).includes(district) ? district : ""}>
-                  <option value="">Not given</option>
-                  {SL_DISTRICTS.map((d) => (
-                    <option key={d}>{d}</option>
+                <span>Country</span>
+                <select name="country" defaultValue="SL">
+                  {COUNTRIES.map((c) => (
+                    <option key={c.iso} value={c.iso}>
+                      {c.name}
+                    </option>
                   ))}
                 </select>
+              </label>
+              <label className="field">
+                <span>District, region or town</span>
+                <input name="district" key={district} defaultValue={district} list="malaria-districts" maxLength={80} />
+                <datalist id="malaria-districts">
+                  {SL_DISTRICTS.map((d) => (
+                    <option key={d} value={d} />
+                  ))}
+                </datalist>
               </label>
               <fieldset className="full malaria-fieldset">
                 <legend>Symptoms (tick each one they have)</legend>

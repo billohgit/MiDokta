@@ -1875,3 +1875,5 @@ img, video { max-width: 100%; }
   .malaria-outcome-buttons .btn { width: 100%; }
   .malaria-days li { min-width: 64px; }
 }
+.malaria-where { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.malaria-where select, .malaria-where input { height: 40px; width: 100%; border: 1px solid #ced4da; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; background: #fff; }

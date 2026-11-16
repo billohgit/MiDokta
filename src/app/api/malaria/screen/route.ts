@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { authorize } from "@/lib/auth";
 import { isLatLng } from "@/lib/geo";
+import { COUNTRIES } from "@/lib/countries";
 import { screenPatient } from "@/lib/malaria/cases";
 import { DANGER_SIGNS, FOR_WHOM, type ForWhom, SYMPTOMS } from "@/lib/malaria/screening";
 
@@ -19,10 +20,12 @@ export async function POST(req: Request) {
   const answers = Object.fromEntries(SYMPTOMS.map((q) => [q.id, raw[q.id] as boolean]));
   const dangerSigns = Array.isArray(body?.dangerSigns) ? DANGER_SIGNS.map((d) => d.id).filter((id) => (body.dangerSigns as unknown[]).includes(id)) : [];
   const forWhom = FOR_WHOM.find((f) => f.id === body?.forWhom)?.id ?? ("SELF" as ForWhom);
-  const district = typeof body?.district === "string" && body.district.trim() ? body.district.trim().slice(0, 60) : null;
+  const district = typeof body?.district === "string" && body.district.trim() ? body.district.trim().slice(0, 80) : null;
+  // A country from the app's list; with a shared location, the server works out both itself.
+  const country = COUNTRIES.find((c) => c.iso === body?.country)?.name ?? null;
 
   try {
-    const result = await screenPatient(patient, { answers, dangerSigns, forWhom, district, location: isLatLng(body?.location) ? body.location : null });
+    const result = await screenPatient(patient, { answers, dangerSigns, forWhom, country, district, location: isLatLng(body?.location) ? body.location : null });
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     console.error("Malaria check:", e);
