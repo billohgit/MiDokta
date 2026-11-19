@@ -1877,3 +1877,21 @@ img, video { max-width: 100%; }
 }
 .malaria-where { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .malaria-where select, .malaria-where input { height: 40px; width: 100%; border: 1px solid #ced4da; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; background: #fff; }
+
+/* Omega: language, offers with a Confirm button, links, basic mode. */
+.omega-lang { height: 32px; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; background: rgba(255, 255, 255, 0.15); color: inherit; font: inherit; font-size: 13px; padding: 0 4px; max-width: 92px; }
+.omega-lang option { color: #212529; }
+.omega-proposal { margin-top: 10px; padding: 12px; border: 1px solid #c9dafc; border-radius: 12px; background: #f4f8ff; white-space: normal; display: flex; flex-direction: column; gap: 6px; }
+.omega-proposal p { margin: 0; }
+.omega-proposal.done { background: #f1faf0; border-color: #bfe3b4; }
+.omega-proposal textarea { width: 100%; font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid #ced4da; border-radius: 8px; resize: vertical; }
+.omega-proposal-quote { padding: 8px 10px; border-left: 3px solid #c9dafc; background: #fff; border-radius: 6px; }
+.omega-proposal-refund { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 13px; }
+.omega-proposal-refund span { grid-column: 1 / -1; color: var(--muted); }
+.omega-proposal-refund select, .omega-proposal-refund input { height: 36px; min-width: 0; border: 1px solid #ced4da; border-radius: 8px; padding: 0 8px; font: inherit; font-size: 14px; background: #fff; }
+.omega-proposal-actions, .omega-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.omega-links { margin-top: 10px; white-space: normal; }
+.omega-proposal-error { color: #8a1c1c; font-size: 13px; }
+.omega-proposal-done { color: #3d7a0c; font-weight: 600; font-size: 14px; }
+.omega-proposal-done a { color: var(--primary); margin-left: 6px; text-decoration: underline; }
+.omega-basic { display: block; margin-bottom: 6px; padding: 4px 8px; border-radius: 6px; background: #fff3cd; color: #8a6300; font-size: 12px; white-space: normal; }

@@ -26,13 +26,17 @@ function recognitionCtor(): (new () => Recognition) | null {
 export const canListen = () => recognitionCtor() !== null;
 export const canSpeak = () => typeof window !== "undefined" && "speechSynthesis" in window;
 
-const lang = () => (navigator.language?.startsWith("en") ? navigator.language : "en-US");
+/** The browser's English, or `wanted` (e.g. "fr-FR") when given. Krio has no speech engine, so it uses English. */
+const lang = (wanted?: string) => wanted ?? (navigator.language?.startsWith("en") ? navigator.language : "en-US");
 
 /**
  * Listens for one spoken message. `onText` gets the words so far while the person talks;
  * `onDone` gets the final text (empty if nothing was heard). Returns a function that stops listening.
  */
-export function listen(handlers: { onText: (text: string) => void; onDone: (text: string) => void; onError: (message: string) => void }) {
+export function listen(
+  handlers: { onText: (text: string) => void; onDone: (text: string) => void; onError: (message: string) => void },
+  language?: string,
+) {
   const Ctor = recognitionCtor();
   if (!Ctor) {
     handlers.onError("Voice input isn't supported in this browser. Try Chrome, or type your question.");
@@ -40,7 +44,7 @@ export function listen(handlers: { onText: (text: string) => void; onDone: (text
   }
   stopSpeaking();
   const rec = new Ctor();
-  rec.lang = lang();
+  rec.lang = lang(language);
   rec.interimResults = true;
   rec.continuous = false;
   let text = "";
@@ -61,20 +65,22 @@ export function listen(handlers: { onText: (text: string) => void; onDone: (text
   return () => rec.stop();
 }
 
-function pickVoice(): SpeechSynthesisVoice | undefined {
-  const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.startsWith("en"));
-  return voices.find((v) => v.lang === navigator.language) ?? voices.find((v) => /female|samantha|zira|google/i.test(v.name)) ?? voices[0];
+function pickVoice(language?: string): SpeechSynthesisVoice | undefined {
+  const prefix = (language ?? "en").slice(0, 2);
+  const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.startsWith(prefix));
+  const exact = language ?? navigator.language;
+  return voices.find((v) => v.lang === exact) ?? voices.find((v) => /female|samantha|zira|google|amelie|audrey/i.test(v.name)) ?? voices[0];
 }
 
 /** Reads text aloud, replacing anything already being said. Resolves when done (or if speech is blocked). */
-export function speak(text: string): Promise<void> {
+export function speak(text: string, language?: string): Promise<void> {
   if (!canSpeak() || !text.trim()) return Promise.resolve();
   const synth = window.speechSynthesis;
   synth.cancel();
   return new Promise((resolve) => {
     const u = new SpeechSynthesisUtterance(text);
-    u.voice = pickVoice() ?? null;
-    u.lang = u.voice?.lang ?? lang();
+    u.voice = pickVoice(language) ?? null;
+    u.lang = u.voice?.lang ?? lang(language);
     u.rate = 0.95;
     u.onend = () => resolve();
     u.onerror = () => resolve();

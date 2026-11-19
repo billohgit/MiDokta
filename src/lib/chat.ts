@@ -53,7 +53,7 @@ export async function isParticipant(conversationId: string, userId: string) {
  * Who `me` may add to conversations. Patients reach only their own doctors and doctors only their
  * own patients; admins and the staff roles work across the whole clinic, so they can reach anyone.
  */
-function contactsWhere(me: Pick<User, "id" | "role">): Prisma.UserWhereInput {
+export function contactsWhere(me: Pick<User, "id" | "role">): Prisma.UserWhereInput {
   const base: Prisma.UserWhereInput = { isActive: true, id: { not: me.id } };
   if (me.role === Role.PATIENT) return { ...base, role: Role.DOCTOR, doctorAppointments: { some: { patientId: me.id } } };
   if (me.role !== Role.DOCTOR) return base;

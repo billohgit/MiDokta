@@ -1,26 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import type { NearbyHospital } from "@/lib/omega/hospitals";
 import { tipOfTheWeek } from "@/lib/malaria/screening";
+import { OMEGA_LANGUAGES, type OmegaHospital, type OmegaLanguage, type OmegaReply, isOmegaLanguage } from "@/lib/omega/types";
+import { useLocale } from "@/components/i18n/LocaleProvider";
 import { canListen, listen, setVoiceEnabled, speak, spokenDose, stopSpeaking, voiceEnabled } from "./speech";
 import MalariaCheck from "./MalariaCheck";
+import ProposalCard from "./ProposalCard";
 import { MALARIA_CHECK_EVENT } from "./events";
+import { OMEGA_TEXT, type OmegaText } from "./ui-text";
 
 /**
  * Omega, the patient's AI health assistant: a floating button on every patient page that opens a
- * chat the patient can talk to. Omega answers aloud, finds the nearest hospitals with directions,
- * and knows the patient's medicines and appointments (src/lib/omega/agent.ts).
+ * chat the patient can type or talk to, in English, Krio or French. Omega answers aloud, finds the
+ * nearest hospitals with directions, knows the patient's medicines, appointments, tests and
+ * referrals, and offers to book, cancel, reorder medicine or message a doctor, each with a Confirm
+ * button (src/lib/omega/agent.ts). Without the AI it still answers simple requests (basic mode).
  */
 
-type Entry = { role: "user" | "assistant"; text: string; hospitals?: NearbyHospital[]; error?: boolean };
+type Reply = Extract<OmegaReply, { kind: "reply" }>;
+type Entry = { role: "user" | "assistant"; text: string; error?: boolean } & Partial<Pick<Reply, "hospitals" | "proposals" | "links" | "basic">>;
 type LatLng = { lat: number; lng: number };
-
-const SUGGESTIONS = [
-  { label: "Nearest hospital", icon: "fa-hospital", text: "Where is the nearest hospital?" },
-  { label: "My medicines", icon: "fa-pills", text: "When should I take my medicine today?" },
-  { label: "Next appointment", icon: "fa-calendar-check", text: "When is my next appointment?" },
-];
 
 function getPosition(): Promise<LatLng | null> {
   if (!("geolocation" in navigator)) return Promise.resolve(null);
@@ -28,8 +29,8 @@ function getPosition(): Promise<LatLng | null> {
     navigator.geolocation.getCurrentPosition(
       (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
       () => resolve(null),
-      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 2 * 60_000 }
-    )
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 2 * 60_000 },
+    ),
   );
 }
 
@@ -45,10 +46,9 @@ async function knownPosition(): Promise<LatLng | null> {
 
 const localTime = () =>
   new Date().toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const today = () => new Date().toLocaleDateString("en-CA");
 
-type Reply = { kind: "reply"; text: string; hospitals?: NearbyHospital[]; action?: "malaria-check" } | { kind: "needs-location" };
-
-async function ask(history: Entry[], location: LatLng | null): Promise<Reply> {
+async function ask(history: Entry[], location: LatLng | null, language: OmegaLanguage): Promise<OmegaReply> {
   const res = await fetch("/api/omega", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -56,14 +56,19 @@ async function ask(history: Entry[], location: LatLng | null): Promise<Reply> {
       messages: history.filter((e) => !e.error).map(({ role, text }) => ({ role, text })),
       location,
       localTime: localTime(),
+      today: today(),
+      language,
     }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? "Omega couldn't answer just now. Please try again.");
-  return data as Reply;
+  return data as OmegaReply;
 }
 
+const LANGUAGE_KEY = "omega:language";
+
 export default function OmegaAssistant({ firstName }: { firstName: string }) {
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [input, setInput] = useState("");
@@ -72,18 +77,29 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
   const [listening, setListening] = useState(false);
   const [voice, setVoice] = useState(true);
   const [micSupported, setMicSupported] = useState(false);
+  const [language, setLanguage] = useState<OmegaLanguage>(locale === "fr" ? "fr" : "en");
   const stopListening = useRef<(() => void) | null>(null);
   /** The malaria check on screen (its key, so starting again restarts it). */
   const [check, setCheck] = useState<number | null>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const t: OmegaText = OMEGA_TEXT[language];
+  const speech = OMEGA_LANGUAGES.find((l) => l.id === language)!.speech;
+  const say = (text: string) => voice && speak(spokenDose(text), speech);
+
   const startCheck = () => {
     setOpen(true);
     setCheck(Date.now());
   };
-  const scroller = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setVoice(voiceEnabled());
     setMicSupported(canListen());
+    try {
+      const saved = localStorage.getItem(LANGUAGE_KEY);
+      if (isOmegaLanguage(saved)) setLanguage(saved);
+    } catch {
+      // Private window: the default language applies.
+    }
   }, []);
 
   useEffect(() => {
@@ -102,6 +118,16 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
     }
   }, [open]);
 
+  const chooseLanguage = (l: OmegaLanguage) => {
+    setLanguage(l);
+    stopSpeaking();
+    try {
+      localStorage.setItem(LANGUAGE_KEY, l);
+    } catch {
+      // Not remembered in private windows.
+    }
+  };
+
   const send = async (text: string) => {
     text = text.trim();
     if (!text || busy) return;
@@ -109,30 +135,24 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
     setEntries(history);
     setInput("");
     setBusy(true);
-    setStatus("Thinking...");
+    setStatus(t.thinking);
 
     const answer = (entry: Entry) => {
       setEntries((prev) => [...prev, entry]);
-      if (voice && !entry.error) speak(spokenDose(entry.text));
+      if (!entry.error) say(entry.text);
     };
 
     try {
-      let reply = await ask(history, await knownPosition());
+      let reply = await ask(history, await knownPosition(), language);
       if (reply.kind === "needs-location") {
-        setStatus("Finding your location...");
+        setStatus(t.locating);
         const position = await getPosition();
-        if (!position) {
-          answer({
-            role: "assistant",
-            text: "I need your location to find hospitals near you. Please allow location access for this site in your browser settings, then ask me again.",
-          });
-          return;
-        }
-        setStatus("Searching for hospitals near you...");
-        reply = await ask(history, position);
+        if (!position) return answer({ role: "assistant", text: t.needLocation });
+        setStatus(t.searching);
+        reply = await ask(history, position, language);
       }
       if (reply.kind === "reply") {
-        answer({ role: "assistant", text: reply.text, hospitals: reply.hospitals });
+        answer({ role: "assistant", text: reply.text, hospitals: reply.hospitals, proposals: reply.proposals, links: reply.links, basic: reply.basic });
         if (reply.action === "malaria-check") setCheck(Date.now());
       }
     } catch (e) {
@@ -149,21 +169,24 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
       return;
     }
     setListening(true);
-    stopListening.current = listen({
-      onText: setInput,
-      onDone: (text) => {
-        setListening(false);
-        stopListening.current = null;
-        if (text) send(text);
+    stopListening.current = listen(
+      {
+        onText: setInput,
+        onDone: (text) => {
+          setListening(false);
+          stopListening.current = null;
+          if (text) send(text);
+        },
+        onError: (message) => setEntries((prev) => [...prev, { role: "assistant", text: message, error: true }]),
       },
-      onError: (message) => setEntries((prev) => [...prev, { role: "assistant", text: message, error: true }]),
-    });
+      speech,
+    );
   };
 
   const malariaTip = () => {
-    const tip = `Malaria tip of the week: ${tipOfTheWeek().text}`;
+    const tip = t.tip(tipOfTheWeek().text);
     setEntries((prev) => [...prev, { role: "assistant", text: tip }]);
-    if (voice) speak(tip);
+    say(tip);
   };
 
   const toggleVoice = () => {
@@ -176,22 +199,27 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
     send(input);
   };
 
+  const chips = [t.chips.hospital, t.chips.medicines, t.chips.appointment, t.chips.results, t.chips.book, t.chips.reorder];
+  const icons = ["fa-hospital", "fa-pills", "fa-calendar-check", "fa-vial", "fa-calendar-plus", "fa-prescription-bottle-medical"];
+
   return (
     <>
       {open && (
-        <section className="omega-panel" aria-label="Omega, your AI health assistant">
+        <section className="omega-panel" aria-label="Omega" lang={language === "kri" ? "kri" : language}>
           <header className="omega-head">
             <img src="/omega.png" alt="" className="omega-avatar" />
             <div className="omega-title">
               <strong>Omega</strong>
-              <small>Your AI health assistant</small>
+              <small>{t.subtitle}</small>
             </div>
-            <button
-              className="icon-btn"
-              onClick={toggleVoice}
-              aria-label={voice ? "Turn voice off" : "Turn voice on"}
-              title={voice ? "Voice on" : "Voice off"}
-            >
+            <select className="omega-lang" value={language} onChange={(e) => chooseLanguage(e.target.value as OmegaLanguage)} aria-label={t.language} title={t.language}>
+              {OMEGA_LANGUAGES.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+            <button className="icon-btn" onClick={toggleVoice} aria-label={voice ? "Turn voice off" : "Turn voice on"} title={voice ? "Voice on" : "Voice off"}>
               <i className={`fa-solid ${voice ? "fa-volume-high" : "fa-volume-xmark"}`} />
             </button>
             <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close Omega">
@@ -200,17 +228,25 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
           </header>
 
           <div className="omega-messages" ref={scroller} aria-live="polite">
-            <div className="omega-msg assistant">
-              Hi {firstName}! I&apos;m Omega. Ask me about your medicines, your appointments, or where the nearest hospital
-              is. If you have a fever, I can check you for malaria. {micSupported ? "Tap the microphone to talk to me." : ""}
-            </div>
+            <div className="omega-msg assistant">{t.greeting(firstName, micSupported)}</div>
             {entries.map((e, i) => (
               <div key={i} className={`omega-msg ${e.role}${e.error ? " error" : ""}`}>
+                {e.basic && <span className="omega-basic">{t.basic}</span>}
                 {e.text}
-                {e.hospitals && e.hospitals.length > 0 && <HospitalResults hospitals={e.hospitals} />}
+                {e.hospitals && e.hospitals.length > 0 && <HospitalResults hospitals={e.hospitals} t={t} />}
+                {e.proposals?.map((p, j) => <ProposalCard key={j} p={p} t={t} />)}
+                {e.links && e.links.length > 0 && (
+                  <div className="omega-links">
+                    {e.links.map((l) => (
+                      <Link key={l.href} href={l.href} className="btn btn-outline btn-sm" onClick={() => setOpen(false)}>
+                        {l.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
-            {check && <MalariaCheck key={check} say={(t) => voice && speak(t)} getPosition={getPosition} onClose={() => setCheck(null)} />}
+            {check && <MalariaCheck key={check} say={(text) => voice && speak(text)} getPosition={getPosition} onClose={() => setCheck(null)} />}
             {busy && (
               <div className="omega-msg assistant omega-typing">
                 <i className="fa-solid fa-circle-notch fa-spin" /> {status}
@@ -219,14 +255,14 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
             {entries.length === 0 && !check && (
               <div className="omega-suggestions">
                 <button className="omega-chip" onClick={startCheck} disabled={busy}>
-                  <i className="fa-solid fa-mosquito" /> Malaria check
+                  <i className="fa-solid fa-mosquito" /> {t.chips.malaria}
                 </button>
                 <button className="omega-chip" onClick={malariaTip} disabled={busy}>
-                  <i className="fa-solid fa-shield-virus" /> Malaria tip
+                  <i className="fa-solid fa-shield-virus" /> {t.chips.tip}
                 </button>
-                {SUGGESTIONS.map((s) => (
-                  <button key={s.label} className="omega-chip" onClick={() => send(s.text)} disabled={busy}>
-                    <i className={`fa-solid ${s.icon}`} /> {s.label}
+                {chips.map(([label, question], i) => (
+                  <button key={label} className="omega-chip" onClick={() => send(question)} disabled={busy}>
+                    <i className={`fa-solid ${icons[i]}`} /> {label}
                   </button>
                 ))}
               </div>
@@ -245,18 +281,12 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
                 <i className={`fa-solid ${listening ? "fa-stop" : "fa-microphone"}`} />
               </button>
             )}
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={listening ? "Listening..." : "Ask Omega..."}
-              aria-label="Message Omega"
-              disabled={listening}
-            />
+            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={listening ? t.listening : t.placeholder} aria-label="Message Omega" disabled={listening} />
             <button type="submit" className="omega-send" disabled={busy || !input.trim()} aria-label="Send">
               <i className="fa-solid fa-paper-plane" />
             </button>
           </form>
-          <p className="omega-disclaimer">Omega gives general information, not a diagnosis. In an emergency, call your local emergency number.</p>
+          <p className="omega-disclaimer">{t.disclaimer}</p>
         </section>
       )}
 
@@ -268,7 +298,7 @@ export default function OmegaAssistant({ firstName }: { firstName: string }) {
   );
 }
 
-function HospitalResults({ hospitals }: { hospitals: NearbyHospital[] }) {
+function HospitalResults({ hospitals, t }: { hospitals: OmegaHospital[]; t: OmegaText }) {
   const nearest = hospitals[0];
   const pad = 0.01;
   const bbox = [nearest.lng - pad, nearest.lat - pad, nearest.lng + pad, nearest.lat + pad].join(",");
@@ -282,7 +312,7 @@ function HospitalResults({ hospitals }: { hospitals: NearbyHospital[] }) {
         loading="lazy"
       />
       <a className="btn btn-primary omega-navigate" href={nearest.directionsUrl} target="_blank" rel="noopener noreferrer">
-        <i className="fa-solid fa-diamond-turn-right btn-icon" /> Start navigation to {nearest.name}
+        <i className="fa-solid fa-diamond-turn-right btn-icon" /> {t.navigate(nearest.name)}
       </a>
       <ul>
         {hospitals.map((h) => (
@@ -290,26 +320,26 @@ function HospitalResults({ hospitals }: { hospitals: NearbyHospital[] }) {
             <div className="omega-hospital-info">
               <strong>{h.name}</strong>
               <small>
-                {h.distanceKm} km away · {h.kind}
-                {h.onMiDokta && <span className="omega-tag">On miDokta</span>}
-                {h.emergency && <span className="omega-tag emergency">Emergency</span>}
+                {h.distanceKm} {t.km} · {h.kind}
+                {h.onMiDokta && <span className="omega-tag">{t.onMiDokta}</span>}
+                {h.emergency && <span className="omega-tag emergency">{t.emergency}</span>}
               </small>
               {h.address && <small>{h.address}</small>}
             </div>
             <div className="omega-hospital-actions">
               {h.phone && (
-                <a className="icon-btn" href={`tel:${h.phone.replace(/[^\d+]/g, "")}`} aria-label={`Call ${h.name}`} title="Call">
+                <a className="icon-btn" href={`tel:${h.phone.replace(/[^\d+]/g, "")}`} aria-label={`${t.call} ${h.name}`} title={t.call}>
                   <i className="fa-solid fa-phone" />
                 </a>
               )}
               <a className="btn btn-outline btn-sm" href={h.directionsUrl} target="_blank" rel="noopener noreferrer">
-                Directions
+                {t.directions}
               </a>
             </div>
           </li>
         ))}
       </ul>
-      <small className="omega-note">Distances are in a straight line; the road route may be longer.</small>
+      <small className="omega-note">{t.straightLine}</small>
     </div>
   );
 }
