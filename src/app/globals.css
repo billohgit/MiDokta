@@ -1409,8 +1409,9 @@ code { background: #f1f3f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9
 .invoice-paylink { margin-bottom: 16px; }
 
 /* ---------- Patient sign-in ---------- */
-.login-who { display: flex; margin-bottom: 20px; }
-.login-who button { flex: 1; }
+/* Fits its two buttons, like the text, instead of the full card width. */
+.login-who { display: inline-flex; margin-bottom: 20px; }
+.login-who button { flex: none; padding: 6px 14px; }
 .login-step-text { color: var(--muted); font-size: 15px; }
 .login-step-text strong { color: var(--text); white-space: nowrap; }
 .login-links { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
