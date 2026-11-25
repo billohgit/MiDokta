@@ -4,6 +4,7 @@ import { saveDoctor } from "@/app/actions/doctors";
 import Modal from "@/components/ui/Modal";
 import useServerAction from "@/components/ui/useServerAction";
 import type { DoctorRow, Hospital } from "./types";
+import { fullPhone } from "@/lib/sms/phone";
 
 type Props = { doctor: DoctorRow | null; hospitals: Hospital[]; onClose: () => void };
 
@@ -31,7 +32,7 @@ export default function DoctorFormModal({ doctor, hospitals, onClose }: Props) {
         </label>
         <label className="field">
           <span>Phone</span>
-          <input type="tel" name="phone" defaultValue={doctor?.phone ?? ""} placeholder="+232 76 123 456" />
+          <input type="tel" name="phone" defaultValue={fullPhone(doctor?.phone)} placeholder="+232 76 123 456" />
         </label>
         <label className="field sms-opt">
           <span>SMS notifications</span>

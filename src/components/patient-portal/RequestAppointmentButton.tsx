@@ -7,6 +7,7 @@ import { requestAppointment } from "@/app/actions/patient-portal";
 import Modal from "@/components/ui/Modal";
 import useServerAction from "@/components/ui/useServerAction";
 import { WALLET_OPTIONS } from "@/components/payments/wallets";
+import { fullPhone } from "@/lib/sms/phone";
 
 /** `fee` is formatted, or null when booking the doctor is free. */
 type Doctor = { id: string; name: string; specialty: string | null; fee: string | null };
@@ -123,7 +124,7 @@ export default function RequestAppointmentButton({
                   </label>
                   <label className="field">
                     <span>{wallet === "TENKIPAY" ? "Wallet number *" : "Mobile number *"}</span>
-                    <input name="refundAccount" defaultValue={phone ?? ""} required inputMode={wallet === "TENKIPAY" ? "text" : "tel"} />
+                    <input name="refundAccount" defaultValue={fullPhone(phone)} placeholder="+232 76 123 456" required inputMode={wallet === "TENKIPAY" ? "text" : "tel"} />
                   </label>
                 </>
               )}

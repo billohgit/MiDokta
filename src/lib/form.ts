@@ -1,6 +1,6 @@
 /** Helpers for reading and validating FormData in server actions. */
 
-import { PHONE_HINT, normalizePhone } from "@/lib/sms/phone";
+import { PHONE_HINT, hasCountryCode, normalizePhone } from "@/lib/sms/phone";
 
 export { PHONE_HINT };
 
@@ -52,7 +52,8 @@ export function dateValue(formData: FormData, key: string): Date | null | undefi
 export function phoneValue(formData: FormData, key: string): string | null | undefined {
   const value = text(formData, key);
   if (value === null) return null;
-  return normalizePhone(value) ? value : undefined;
+  // Saved in full international form; a number without its country code is refused.
+  return (hasCountryCode(value) && normalizePhone(value)) || undefined;
 }
 
 /** Checkbox value: true when ticked. */

@@ -22,7 +22,7 @@ export async function saveConsultationSettings(formData: FormData): Promise<Acti
   const raw = text(formData, "payoutAccount");
   const payoutAccount = payoutWallet ? walletAccount(payoutWallet, raw) : null;
   if (payoutWallet && !payoutAccount) {
-    return fail(payoutWallet === "TENKIPAY" ? "Enter your TenkiPay wallet number." : "Enter a valid Sierra Leone mobile number.");
+    return fail(payoutWallet === "TENKIPAY" ? "Enter your TenkiPay wallet number." : "Enter the mobile number with its country code, e.g. +232 76 123 456.");
   }
   if (fee && Number(fee) > 0 && !payoutWallet) return fail("Add the mobile money number your fees should be paid to.");
 

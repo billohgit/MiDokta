@@ -26,7 +26,7 @@ export default function ResetPasswordForm({ defaultCountry }: { defaultCountry: 
         ) : (
           <label className="field">
             <span>Email or phone number</span>
-            <input name="identifier" autoComplete="username" defaultValue={state.identifier} placeholder="you@example.com or 076 123 456" required autoFocus />
+            <input name="identifier" autoComplete="username" defaultValue={state.identifier} placeholder="you@example.com or +232 76 123 456" required autoFocus />
           </label>
         )}
 

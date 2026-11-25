@@ -6,6 +6,7 @@ import { savePharmacy } from "@/app/actions/pharmacy";
 import useServerAction from "@/components/ui/useServerAction";
 import { WALLET_OPTIONS } from "@/components/payments/wallets";
 import { directionsUrl } from "@/lib/geo";
+import { fullPhone } from "@/lib/sms/phone";
 
 export type PharmacySettings = {
   name: string;
@@ -69,7 +70,7 @@ export default function PharmacySettingsForm({ pharmacy }: { pharmacy: PharmacyS
       </label>
       <label className="field">
         <span>Phone</span>
-        <input name="phone" type="tel" defaultValue={pharmacy?.phone ?? ""} />
+        <input name="phone" type="tel" defaultValue={fullPhone(pharmacy?.phone)} placeholder="+232 76 123 456" />
       </label>
       <div className="field full">
         <span>Pharmacy location</span>

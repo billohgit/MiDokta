@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { deleteHospital, saveHospital, setHospitalActive } from "@/app/actions/hospitals";
 import Modal from "@/components/ui/Modal";
 import useServerAction from "@/components/ui/useServerAction";
+import { fullPhone } from "@/lib/sms/phone";
 
 export type HospitalRow = {
   id: string;
@@ -177,7 +178,7 @@ function HospitalForm({ hospital, onClose }: { hospital: HospitalRow | null; onC
         </label>
         <label className="field">
           <span>Phone</span>
-          <input type="tel" name="phone" defaultValue={hospital?.phone ?? ""} />
+          <input type="tel" name="phone" defaultValue={fullPhone(hospital?.phone)} placeholder="+232 76 123 456" />
         </label>
         <label className="field">
           <span>Email</span>

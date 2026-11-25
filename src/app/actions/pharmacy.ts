@@ -92,7 +92,7 @@ export async function checkout(formData: FormData): Promise<ActionResult & { pay
   const refundWallet = enumValue(formData, "refundWallet", Object.values(MobileWallet));
   if (!refundWallet) return fail("Choose where a refund should go.");
   const refundAccount = walletAccount(refundWallet, text(formData, "refundAccount"));
-  if (!refundAccount) return fail(refundWallet === "TENKIPAY" ? "Enter your TenkiPay wallet number." : "Enter a valid Sierra Leone mobile number for refunds.");
+  if (!refundAccount) return fail(refundWallet === "TENKIPAY" ? "Enter your TenkiPay wallet number." : "Enter the mobile number for refunds with its country code, e.g. +232 76 123 456.");
   if (channelsRefundableTo(refundWallet).length === 0) return fail("Online payment isn't available for that refund account right now. Choose another.");
 
   const result = await placeOrder({ patient: me, fulfilment, deliveryAddress, contactPhone, refundWallet, refundAccount });
@@ -155,7 +155,7 @@ export async function savePharmacy(formData: FormData): Promise<ActionResult> {
   const payoutWallet = enumValue(formData, "payoutWallet", Object.values(MobileWallet));
   if (payoutWallet === undefined) return fail("Choose where you want to be paid.");
   const payoutAccount = payoutWallet ? walletAccount(payoutWallet, text(formData, "payoutAccount")) : null;
-  if (payoutWallet && !payoutAccount) return fail(payoutWallet === "TENKIPAY" ? "Enter your TenkiPay wallet number." : "Enter a valid Sierra Leone mobile number.");
+  if (payoutWallet && !payoutAccount) return fail(payoutWallet === "TENKIPAY" ? "Enter your TenkiPay wallet number." : "Enter the mobile number with its country code, e.g. +232 76 123 456.");
 
   // Map position: both numbers or neither (cleared).
   const lat = text(formData, "latitude");

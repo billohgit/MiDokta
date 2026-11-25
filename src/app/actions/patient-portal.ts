@@ -55,7 +55,7 @@ export async function requestAppointment(formData: FormData): Promise<ActionResu
     const refundWallet = enumValue(formData, "refundWallet", Object.values(MobileWallet));
     if (!refundWallet) return fail("Choose where a refund should go.");
     const refundAccount = walletAccount(refundWallet, text(formData, "refundAccount"));
-    if (!refundAccount) return fail(refundWallet === "TENKIPAY" ? "Enter your TenkiPay wallet number." : "Enter a valid Sierra Leone mobile number for refunds.");
+    if (!refundAccount) return fail(refundWallet === "TENKIPAY" ? "Enter your TenkiPay wallet number." : "Enter the mobile number for refunds with its country code, e.g. +232 76 123 456.");
     if (channelsRefundableTo(refundWallet).length === 0) return fail("Online payment isn't available for that account right now. Choose another.");
     const payInvoiceId = await bookConsultation({ patient: me, doctor, fee, title: reason, startsAt, visitType, refundWallet, refundAccount });
     revalidatePath("/", "layout");

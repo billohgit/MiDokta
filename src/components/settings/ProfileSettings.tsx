@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import type { Gender, Role } from "@prisma/client";
 import { updateProfile, uploadAvatar } from "@/app/actions/profile";
 import { shrinkUpload } from "@/components/ui/ImageCapture";
+import { fullPhone } from "@/lib/sms/phone";
 
 /** Avatars are shown at most a couple of hundred pixels wide. */
 const AVATAR_SIDE = 512;
@@ -199,7 +200,7 @@ export default function ProfileSettings({ profile, children }: { profile: Profil
             {isPatient ? (
               <Field label="Phone Number:" name="phone" editing={false} display={profile.phone && `${profile.phone} (you sign in with this; the clinic can change it)`} />
             ) : (
-              <Field label="Phone Number:" name="phone" type="tel" editing={editing} display={profile.phone} defaultValue={profile.phone} />
+              <Field label="Phone Number:" name="phone" type="tel" editing={editing} display={profile.phone} defaultValue={fullPhone(profile.phone)} />
             )}
             <Field label="SMS Notifications:" name="smsOptIn" editing={editing} display={profile.smsOptIn ? "On" : "Off"}>
               <label className="checkbox-line detail-input-plain">

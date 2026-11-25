@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { authorize } from "@/lib/auth";
-import { type ActionResult, DENIED, fail, isEmail, text } from "@/lib/form";
+import { type ActionResult, DENIED, PHONE_HINT, fail, isEmail, phoneValue, text } from "@/lib/form";
 
 const refresh = () => revalidatePath("/", "layout");
 
@@ -26,10 +26,13 @@ export async function saveHospital(formData: FormData): Promise<ActionResult> {
   if (latitude !== null && !(Math.abs(latitude) <= 90)) return fail("Latitude must be between -90 and 90.");
   if (longitude !== null && !(Math.abs(longitude) <= 180)) return fail("Longitude must be between -180 and 180.");
 
+  const phone = phoneValue(formData, "phone");
+  if (phone === undefined) return fail(PHONE_HINT);
+
   const data = {
     name,
     email,
-    phone: text(formData, "phone"),
+    phone,
     address: text(formData, "address"),
     city: text(formData, "city"),
     latitude,

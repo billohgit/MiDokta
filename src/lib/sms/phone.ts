@@ -25,4 +25,13 @@ export function normalizePhone(raw: string | null | undefined, countryCode = DEF
   return `+${digits}`;
 }
 
-export const PHONE_HINT = `Enter a valid phone number, e.g. +${DEFAULT_COUNTRY_CODE} 76 123 456`;
+export const PHONE_HINT = `Enter the phone number with its country code, e.g. +${DEFAULT_COUNTRY_CODE} 76 123 456`;
+
+/**
+ * Whether a number someone typed starts with its country code (+232 ..., or 00232 ...). Every number
+ * people type must, Sierra Leone's included; normalizePhone still reads older numbers saved without it.
+ */
+export const hasCountryCode = (typed: string | null | undefined) => /^\s*(\+|00)/.test(typed ?? "");
+
+/** A saved number shown in full international form (+232 ...), for prefilling forms; older numbers were saved as typed. */
+export const fullPhone = (saved: string | null | undefined) => (saved ? (normalizePhone(saved) ?? saved) : "");

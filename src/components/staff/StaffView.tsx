@@ -6,6 +6,7 @@ import { deleteStaff, saveStaff, setStaffActive } from "@/app/actions/staff";
 import Avatar from "@/components/appointments/Avatar";
 import Modal from "@/components/ui/Modal";
 import useServerAction from "@/components/ui/useServerAction";
+import { fullPhone } from "@/lib/sms/phone";
 
 type StaffRole = "ADMIN" | "NURSE" | "PHARMACIST" | "RECEPTIONIST";
 
@@ -216,7 +217,7 @@ function StaffForm({
         </label>
         <label className="field">
           <span>Phone</span>
-          <input type="tel" name="phone" defaultValue={member?.phone ?? ""} placeholder="+232 76 123 456" />
+          <input type="tel" name="phone" defaultValue={fullPhone(member?.phone)} placeholder="+232 76 123 456" />
         </label>
         <label className="field sms-opt">
           <span>SMS notifications</span>

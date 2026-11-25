@@ -8,7 +8,7 @@ import { PORTAL_TOKEN, notifyRoles, notifyUsers } from "@/lib/notifications";
 import { isUniqueViolation } from "@/lib/form";
 import { queueSms } from "@/lib/sms";
 import { SMS_BRAND } from "@/lib/sms/templates";
-import { normalizePhone } from "@/lib/sms/phone";
+import { hasCountryCode, normalizePhone } from "@/lib/sms/phone";
 import { formatDate } from "@/components/appointments/shared";
 
 /**
@@ -53,7 +53,7 @@ export function walletAccount(wallet: MobileWallet, raw: string | null): string 
   const value = raw?.trim();
   if (!value) return null;
   if (wallet === "TENKIPAY") return /^[A-Za-z0-9+._-]{3,60}$/.test(value) ? value : null;
-  const phone = normalizePhone(value, "232");
+  const phone = hasCountryCode(value) ? normalizePhone(value, "232") : null;
   return phone?.startsWith("+232") ? phone : null;
 }
 

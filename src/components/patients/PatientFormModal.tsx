@@ -6,6 +6,7 @@ import useServerAction from "@/components/ui/useServerAction";
 import { BLOOD_GROUPS } from "@/lib/people";
 import type { PatientFormData } from "./types";
 import { CONDITIONS } from "@/lib/conditions";
+import { fullPhone } from "@/lib/sms/phone";
 
 type Props = { patient: PatientFormData | null; onClose: () => void; onSaved?: (id: string) => void };
 
@@ -62,7 +63,7 @@ export default function PatientFormModal({ patient, onClose, onSaved }: Props) {
           <input
             type="tel"
             name="phone"
-            defaultValue={patient?.phone ?? ""}
+            defaultValue={fullPhone(patient?.phone)}
             placeholder="+232 76 123 456"
             required={!patient}
           />

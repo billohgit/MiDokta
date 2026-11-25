@@ -9,6 +9,7 @@ import useServerAction from "@/components/ui/useServerAction";
 import { WALLET_OPTIONS } from "@/components/payments/wallets";
 import { formatMoney } from "@/lib/money";
 import PharmacyDistance from "./PharmacyDistance";
+import { fullPhone } from "@/lib/sms/phone";
 
 export type CartLine = { productId: string; name: string; detail: string; imageUrl: string | null; unitPrice: number; quantity: number; inStock: number };
 
@@ -148,7 +149,7 @@ export default function CartView({ lines, pharmacy, phone, address }: Props) {
         )}
         <label className="field full">
           <span>Phone for the pharmacy to reach you *</span>
-          <input name="contactPhone" type="tel" defaultValue={phone ?? ""} required />
+          <input name="contactPhone" type="tel" defaultValue={fullPhone(phone)} placeholder="+232 76 123 456" required />
         </label>
         <p className="form-note full">
           <i className="fa-solid fa-circle-info" /> You pay now. The pharmacy is paid only after you confirm you have your order. If it&apos;s
@@ -166,7 +167,7 @@ export default function CartView({ lines, pharmacy, phone, address }: Props) {
         </label>
         <label className="field">
           <span>{wallet === "TENKIPAY" ? "Wallet number *" : "Mobile number *"}</span>
-          <input name="refundAccount" defaultValue={phone ?? ""} required inputMode={wallet === "TENKIPAY" ? "text" : "tel"} />
+          <input name="refundAccount" defaultValue={fullPhone(phone)} placeholder="+232 76 123 456" required inputMode={wallet === "TENKIPAY" ? "text" : "tel"} />
         </label>
         {error && <p className="form-error full">{error}</p>}
         <div className="modal-actions full">

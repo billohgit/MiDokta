@@ -29,7 +29,7 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   const method: LoginMethod = id?.kind ?? (looksLikeEmail(identifier) ? "email" : "phone");
   const fail = (error: string): LoginState => ({ error, method, identifier, country: "" });
   if (!identifier || !password) return fail("Enter your email or phone number, and your password.");
-  if (!id) return fail(method === "email" ? "Enter a valid email address." : "Enter a valid phone number, e.g. 076 123 456 or +232 76 123 456.");
+  if (!id) return fail(method === "email" ? "Enter a valid email address." : "Enter a valid phone number with its country code, e.g. +232 76 123 456.");
   const label = id.kind === "phone" ? "phone number" : "email";
 
   let user;
@@ -93,7 +93,7 @@ export async function patientLogin(prev: PatientLoginState, formData: FormData):
     const id = readIdentifier(identifier);
     if (id?.kind === "email") return fail("To sign in with your email, enter your password too.", { identifier });
     const phone = id?.phone;
-    if (!phone) return fail("Enter a valid phone number, e.g. 076 123 456 or +232 76 123 456.", { identifier });
+    if (!phone) return fail("Enter a valid phone number with its country code, e.g. +232 76 123 456.", { identifier });
 
     const sent = await sendLoginCode(phone);
     if (!sent.ok) return fail(sent.error, { identifier, country });
@@ -247,7 +247,7 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
 
   if (!values.firstName || !values.lastName) return fail("Enter your first and last name.");
   if (!values.identifier) return fail("Enter your email or phone number.");
-  if (!id) return fail(looksLikeEmail(values.identifier) ? "Enter a valid email address." : "Enter a valid phone number, e.g. 076 123 456 or +232 76 123 456.");
+  if (!id) return fail(looksLikeEmail(values.identifier) ? "Enter a valid email address." : "Enter a valid phone number with its country code, e.g. +232 76 123 456.");
   if (!role) return fail("Choose your role.");
   if (typeof photo === "string") return fail(photo);
   if (typeof idCard === "string") return fail(idCard);
