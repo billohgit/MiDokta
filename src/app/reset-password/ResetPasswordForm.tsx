@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
-import { type LoginMethod, type ResetState, passwordReset } from "@/app/actions/auth";
-import PhoneInput from "@/components/ui/PhoneInput";
+import { useActionState } from "react";
+import { type ResetState, passwordReset } from "@/app/actions/auth";
 
-/** Forgot password: find the account by email or phone, get a texted code, choose a new password. */
+/** Forgot password: find the account by email or phone (one box), get a texted code, choose a new password. */
 export default function ResetPasswordForm({ defaultCountry }: { defaultCountry: string }) {
   const [state, action, pending] = useActionState<ResetState, FormData>(passwordReset, {
     step: "request",
@@ -15,42 +14,20 @@ export default function ResetPasswordForm({ defaultCountry }: { defaultCountry: 
     identifier: "",
     country: defaultCountry,
   });
-  const [method, setMethod] = useState<LoginMethod>(state.method);
-  const [country, setCountry] = useState(state.country);
   const resetting = state.step === "reset";
 
   return (
     <>
       <form action={action} className="login-form">
-        {!resetting && (
-          <>
-            <p className="login-sub">Enter the email or phone number on your account. We&apos;ll text a code to the phone number we have for you.</p>
-            <div className="segmented login-method" role="tablist" aria-label="Find my account by">
-              {(["email", "phone"] as const).map((m) => (
-                <button key={m} type="button" role="tab" aria-selected={method === m} className={method === m ? "on" : undefined} onClick={() => setMethod(m)}>
-                  <i className={m === "email" ? "fa-regular fa-envelope" : "fa-solid fa-phone"} /> {m === "email" ? "Email" : "Phone"}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-        <input type="hidden" name="method" value={method} />
+        {!resetting && <p className="login-sub">Enter the email or phone number on your account. We&apos;ll text a code to the phone number we have for you.</p>}
         {resetting ? (
-          <>
-            {/* The account being reset travels with the form. */}
-            <input type="hidden" name="identifier" value={state.identifier} />
-            <input type="hidden" name="country" value={state.country} />
-          </>
-        ) : method === "email" ? (
-          <label className="field" key="email">
-            <span>Email</span>
-            <input type="email" name="identifier" autoComplete="email" defaultValue={state.method === "email" ? state.identifier : ""} required autoFocus />
-          </label>
+          // The account being reset travels with the form.
+          <input type="hidden" name="identifier" value={state.identifier} />
         ) : (
-          <div className="field" key="phone">
-            <label htmlFor="reset-phone">Phone number</label>
-            <PhoneInput id="reset-phone" name="identifier" country={country} onCountryChange={setCountry} defaultValue={state.method === "phone" ? state.identifier : ""} required autoFocus />
-          </div>
+          <label className="field">
+            <span>Email or phone number</span>
+            <input name="identifier" autoComplete="username" defaultValue={state.identifier} placeholder="you@example.com or 076 123 456" required autoFocus />
+          </label>
         )}
 
         {state.notice && <p className="form-note">{state.notice}</p>}

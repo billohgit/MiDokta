@@ -7,33 +7,34 @@ import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { PORTAL_HOME, createSession, destroySession } from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH, hashPassword, verifyPassword } from "@/lib/password";
-import { enumValue, isEmail, isUniqueViolation, text } from "@/lib/form";
+import { enumValue, isUniqueViolation, text } from "@/lib/form";
 import { AVATAR_TYPES, deleteAvatar, deleteIdCard, saveAvatar, saveIdCard } from "@/lib/uploads";
 import { verifyIdentity } from "@/lib/verification";
 import { normalizePhone } from "@/lib/sms/phone";
-import { COUNTRIES, withCountryCode } from "@/lib/countries";
 import { notifyRoles } from "@/lib/notifications";
 import { SIGNUP_ROLES } from "@/lib/roles";
 import { checkLoginCode, redeemLoginCode, sendLoginCode } from "@/lib/login-codes";
 import { findAccount, resetPassword, sendResetCode } from "@/lib/password-reset";
+import { looksLikeEmail, readIdentifier } from "@/lib/identifier";
+import { placeholderEmail } from "@/lib/people";
 
 export type LoginMethod = "email" | "phone";
 export type LoginState = { error: string | null; method: LoginMethod; identifier: string; country: string };
 
+/** Sign in with a password, from one box that takes an email or a phone number (src/lib/identifier.ts). */
 export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
-  const method: LoginMethod = formData.get("method") === "phone" ? "phone" : "email";
   const identifier = String(formData.get("identifier") ?? "").trim();
-  const country = String(formData.get("country") ?? "");
   const password = String(formData.get("password") ?? "");
-  const fail = (error: string): LoginState => ({ error, method, identifier, country });
-  const label = method === "phone" ? "phone number" : "email";
-  if (!identifier || !password) return fail(`Enter your ${label} and password.`);
+  const id = readIdentifier(identifier);
+  const method: LoginMethod = id?.kind ?? (looksLikeEmail(identifier) ? "email" : "phone");
+  const fail = (error: string): LoginState => ({ error, method, identifier, country: "" });
+  if (!identifier || !password) return fail("Enter your email or phone number, and your password.");
+  if (!id) return fail(method === "email" ? "Enter a valid email address." : "Enter a valid phone number, e.g. 076 123 456 or +232 76 123 456.");
+  const label = id.kind === "phone" ? "phone number" : "email";
 
   let user;
-  if (method === "phone") {
-    const code = COUNTRIES.find((c) => c.iso === country)?.code;
-    const phone = code && normalizePhone(withCountryCode(code, identifier));
-    if (!phone) return fail("Enter a valid phone number for the selected country.");
+  if (id.kind === "phone") {
+    const phone = id.phone;
     // Phone numbers are stored as typed and aren't unique, so compare normalised values.
     const candidates = await prisma.user.findMany({ where: { phone: { not: null } } });
     const matches = candidates.filter((u) => normalizePhone(u.phone) === phone);
@@ -43,7 +44,7 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
     if (verified.length > 1) return fail("More than one account uses this phone number. Sign in with your email instead.");
     user = verified[0];
   } else {
-    user = await prisma.user.findUnique({ where: { email: identifier.toLowerCase() } });
+    user = await prisma.user.findUnique({ where: { email: id.email } });
     if (user && !(await verifyPassword(password, user.password))) user = null;
   }
 
@@ -88,10 +89,11 @@ export async function patientLogin(prev: PatientLoginState, formData: FormData):
 
   if (intent === "send" || intent === "resend") {
     const identifier = intent === "send" ? String(formData.get("identifier") ?? "").trim() : prev.identifier;
-    const country = intent === "send" ? String(formData.get("country") ?? "") : prev.country;
-    const code = COUNTRIES.find((c) => c.iso === country)?.code;
-    const phone = code && identifier ? normalizePhone(withCountryCode(code, identifier)) : null;
-    if (!phone) return fail("Enter a valid phone number for the selected country.", { identifier, country });
+    const country = prev.country;
+    const id = readIdentifier(identifier);
+    if (id?.kind === "email") return fail("To sign in with your email, enter your password too.", { identifier });
+    const phone = id?.phone;
+    if (!phone) return fail("Enter a valid phone number, e.g. 076 123 456 or +232 76 123 456.", { identifier });
 
     const sent = await sendLoginCode(phone);
     if (!sent.ok) return fail(sent.error, { identifier, country });
@@ -156,21 +158,13 @@ export type ResetState = {
  */
 export async function passwordReset(prev: ResetState, formData: FormData): Promise<ResetState> {
   const intent = String(formData.get("intent") ?? "");
-  const method: LoginMethod = formData.get("method") === "phone" ? "phone" : "email";
+  // Typed in one box: an email or a phone number (src/lib/identifier.ts).
   const identifier = String(formData.get("identifier") ?? "").trim();
-  const country = String(formData.get("country") ?? prev.country);
-  const state = { ...prev, method, identifier, country, error: null, notice: null };
-
-  let account: { email: string } | { phone: string };
-  if (method === "email") {
-    if (!isEmail(identifier)) return { ...state, step: "request", error: "Enter the email address on your account." };
-    account = { email: identifier };
-  } else {
-    const code = COUNTRIES.find((c) => c.iso === country)?.code;
-    const phone = code && normalizePhone(withCountryCode(code, identifier));
-    if (!phone) return { ...state, step: "request", error: "Enter a valid phone number for the selected country." };
-    account = { phone };
-  }
+  const id = readIdentifier(identifier);
+  const method: LoginMethod = id?.kind ?? (looksLikeEmail(identifier) ? "email" : "phone");
+  const state = { ...prev, method, identifier, error: null, notice: null };
+  if (!id) return { ...state, step: "request", error: "Enter the email address or phone number on your account." };
+  const account: { email: string } | { phone: string } = id.kind === "email" ? { email: id.email } : { phone: id.phone };
   const user = await findAccount(account);
 
   if (intent === "send" || intent === "resend") {
@@ -202,7 +196,8 @@ export async function passwordReset(prev: ResetState, formData: FormData): Promi
 export type SignupState = {
   error: string | null;
   done: boolean;
-  values: { firstName: string; lastName: string; email: string; country: string; phone: string; role: string; mainIllness: string };
+  /** `identifier`: the email or phone number typed in the one box. */
+  values: { firstName: string; lastName: string; identifier: string; role: string; mainIllness: string };
 };
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
@@ -229,9 +224,8 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   const values = {
     firstName: text(formData, "firstName") ?? "",
     lastName: text(formData, "lastName") ?? "",
-    email: text(formData, "email")?.toLowerCase() ?? "",
-    country: text(formData, "country") ?? "",
-    phone: text(formData, "phone") ?? "",
+    // One box: an email or a phone number (src/lib/identifier.ts).
+    identifier: text(formData, "identifier") ?? "",
     role: text(formData, "role") ?? "",
     // Optional, patients only: what they mainly need help with, for doctor and medicine suggestions.
     mainIllness: text(formData, "mainIllness")?.slice(0, 120) ?? "",
@@ -241,17 +235,19 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirmPassword") ?? "");
   const role = enumValue(formData, "role", SIGNUP_ROLES);
-  const code = COUNTRIES.find((c) => c.iso === values.country)?.code;
-  const phone = code && values.phone ? withCountryCode(code, values.phone) : null;
+  const id = readIdentifier(values.identifier);
+  // Without an email the account gets a hidden placeholder one (emails must be unique); without a
+  // phone number there are no texted codes or SMS reminders.
+  const email = id?.kind === "email" ? id.email : null;
+  const phone = id?.kind === "phone" ? id.phone : null;
   const isPatient = role === Role.PATIENT;
   const photoGiven = formData.get("photo") instanceof File && (formData.get("photo") as File).size > 0;
   const photo = isPatient && !photoGiven ? null : imageField(formData, "photo", "photo");
   const idCard = isPatient ? null : imageField(formData, "idCard", "identity card");
 
-  if (!values.firstName || !values.lastName || !values.email) return fail("First name, last name and email are required.");
-  if (!isEmail(values.email)) return fail("Enter a valid email address.");
-  if (!values.phone) return fail("Enter your phone number.");
-  if (!phone || !normalizePhone(phone)) return fail("Enter a valid phone number for the selected country.");
+  if (!values.firstName || !values.lastName) return fail("Enter your first and last name.");
+  if (!values.identifier) return fail("Enter your email or phone number.");
+  if (!id) return fail(looksLikeEmail(values.identifier) ? "Enter a valid email address." : "Enter a valid phone number, e.g. 076 123 456 or +232 76 123 456.");
   if (!role) return fail("Choose your role.");
   if (typeof photo === "string") return fail(photo);
   if (typeof idCard === "string") return fail(idCard);
@@ -260,10 +256,11 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   if (formData.get("acceptTerms") !== "on") return fail("Accept the Terms and Conditions to create an account.");
 
   // Phone numbers are stored as typed, so compare normalised values.
-  const normalized = normalizePhone(phone);
-  const withPhones = await prisma.user.findMany({ where: { phone: { not: null } }, select: { phone: true } });
-  if (withPhones.some((u) => normalizePhone(u.phone) === normalized)) {
-    return fail("An account with that phone number already exists. Sign in instead.");
+  if (phone) {
+    const withPhones = await prisma.user.findMany({ where: { phone: { not: null } }, select: { phone: true } });
+    if (withPhones.some((u) => normalizePhone(u.phone) === phone)) {
+      return fail("An account with that phone number already exists. Sign in instead.");
+    }
   }
 
   const fileId = randomUUID();
@@ -281,7 +278,7 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
       data: {
         firstName: values.firstName,
         lastName: values.lastName,
-        email: values.email,
+        email: email ?? placeholderEmail(),
         phone,
         role,
         mainIllness: isPatient && values.mainIllness ? values.mainIllness : null,

@@ -5,18 +5,17 @@ import { type FormEvent, startTransition, useActionState, useState } from "react
 import { type SignupState, signup } from "@/app/actions/auth";
 import { SIGNUP_ROLES } from "@/lib/roles";
 import ImageCapture from "@/components/ui/ImageCapture";
-import PhoneInput from "@/components/ui/PhoneInput";
 import { useDictionary } from "@/components/i18n/LocaleProvider";
 import { CONDITIONS } from "@/lib/conditions";
 
-export default function SignupForm({ defaultCountry }: { defaultCountry: string }) {
+// One box takes an email or a phone number, so no country picker: local numbers are Sierra Leone's.
+export default function SignupForm(_props: { defaultCountry: string }) {
   const [state, action, pending] = useActionState<SignupState, FormData>(signup, {
     error: null,
     done: false,
-    values: { firstName: "", lastName: "", email: "", country: defaultCountry, phone: "", role: "", mainIllness: "" },
+    values: { firstName: "", lastName: "", identifier: "", role: "", mainIllness: "" },
   });
   const v = state.values;
-  const [country, setCountry] = useState(v.country);
   const [role, setRole] = useState(v.role);
   const [photo, setPhoto] = useState<File | null>(null);
   const [idCard, setIdCard] = useState<File | null>(null);
@@ -43,7 +42,7 @@ export default function SignupForm({ defaultCountry }: { defaultCountry: string 
         <h1>{d.signup.doneTitle}</h1>
         <p className="login-sub">
           {d.signup.doneBody(v.firstName)}{" "}
-          {d.signup.doneOther(v.email)}
+          {d.signup.doneOther(v.identifier)}
         </p>
         <Link href="/login" className="btn btn-primary login-btn">
           {d.signup.backToSignIn}
@@ -70,21 +69,20 @@ export default function SignupForm({ defaultCountry }: { defaultCountry: string 
           </label>
         </div>
         <label className="field">
-          <span>{d.login.email}</span>
-          <input type="email" name="email" autoComplete="email" defaultValue={v.email} required />
-        </label>
-        <div className="field">
-          <label htmlFor="signup-phone">{d.login.phoneNumber}</label>
-          <PhoneInput
-            id="signup-phone"
-            name="phone"
-            country={country}
-            onCountryChange={setCountry}
-            defaultValue={v.phone}
+          <span>{d.login.emailOrPhone}</span>
+          <input
+            name="identifier"
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            placeholder={d.login.emailOrPhonePlaceholder}
+            defaultValue={v.identifier}
             required
           />
-          <small className="form-note">{d.signup.phoneNote}</small>
-        </div>
+          <small className="form-note">
+            {d.signup.phoneNote} {d.login.emailOrPhoneNote}
+          </small>
+        </label>
         <label className="field">
           <span>{d.signup.iAmA}</span>
           <select name="role" value={role} onChange={(e) => setRole(e.target.value)} required>

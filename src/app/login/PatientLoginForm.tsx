@@ -1,28 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { type FormEvent, startTransition, useActionState, useState } from "react";
 import { type LoginState, type PatientLoginState, login, patientLogin } from "@/app/actions/auth";
-import PhoneInput from "@/components/ui/PhoneInput";
 import { useDictionary } from "@/components/i18n/LocaleProvider";
 
-type Method = "phone" | "email";
-
-/** Patients sign in with a code texted to their phone, or with their email and password. */
+/**
+ * Patients type their phone number or their email in one box. A phone number gets a texted code;
+ * an email (anything with an @) signs in with the password.
+ */
 export default function PatientLoginForm({ defaultCountry }: { defaultCountry: string }) {
-  const [method, setMethod] = useState<Method>("phone");
   const d = useDictionary();
-
   return (
     <>
-      <div className="segmented login-method" role="tablist" aria-label={d.login.signInWith}>
-        {(["phone", "email"] as const).map((m) => (
-          <button key={m} type="button" role="tab" aria-selected={method === m} className={method === m ? "on" : undefined} onClick={() => setMethod(m)}>
-            <i className={m === "email" ? "fa-regular fa-envelope" : "fa-solid fa-phone"} /> {m === "email" ? d.login.email : d.login.phone}
-          </button>
-        ))}
-      </div>
-      {method === "phone" ? <PhoneCodeForm defaultCountry={defaultCountry} /> : <EmailPasswordForm />}
+      <PatientSignIn defaultCountry={defaultCountry} />
       <p className="login-alt">
         {d.login.noAccount} <Link href="/signup">{d.login.createOne}</Link>
       </p>
@@ -30,37 +21,8 @@ export default function PatientLoginForm({ defaultCountry }: { defaultCountry: s
   );
 }
 
-function EmailPasswordForm() {
-  const d = useDictionary();
-  const [state, action, pending] = useActionState<LoginState, FormData>(login, {
-    error: null,
-    method: "email",
-    identifier: "",
-    country: "",
-  });
-
-  return (
-    <form action={action} className="login-form">
-      <input type="hidden" name="method" value="email" />
-      <label className="field">
-        <span>{d.login.email}</span>
-        <input type="email" name="identifier" autoComplete="email" defaultValue={state.identifier} required autoFocus />
-      </label>
-      <label className="field">
-        <span>{d.login.password}</span>
-        <input type="password" name="password" autoComplete="current-password" required />
-        <small className="form-note">{d.login.noPasswordYet}</small>
-      </label>
-      {state.error && <p className="form-error">{state.error}</p>}
-      <button type="submit" className="btn btn-primary" disabled={pending}>
-        {pending ? d.login.signingIn : d.login.signIn}
-      </button>
-    </form>
-  );
-}
-
-/** Number, then the texted code, then (shared numbers) who is signing in. */
-function PhoneCodeForm({ defaultCountry }: { defaultCountry: string }) {
+/** Phone: number, then the texted code, then (shared numbers) who is signing in. Email: password. */
+function PatientSignIn({ defaultCountry }: { defaultCountry: string }) {
   const [state, action, pending] = useActionState<PatientLoginState, FormData>(patientLogin, {
     step: "phone",
     error: null,
@@ -71,8 +33,26 @@ function PhoneCodeForm({ defaultCountry }: { defaultCountry: string }) {
     codeId: null,
     choices: [],
   });
-  const [country, setCountry] = useState(state.country);
+  const [emailState, emailAction, emailPending] = useActionState<LoginState, FormData>(login, {
+    error: null,
+    method: "email",
+    identifier: "",
+    country: "",
+  });
+  const [typed, setTyped] = useState(state.identifier);
+  const [used, setUsed] = useState<"phone" | "email">("phone");
   const d = useDictionary();
+  const isEmail = typed.includes("@");
+  const busy = pending || emailPending;
+  const error = used === "email" ? emailState.error : state.error;
+
+  // One form: the box keeps its focus while the patient types, whichever way they sign in.
+  const submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    setUsed(isEmail ? "email" : "phone");
+    startTransition(() => (isEmail ? emailAction(formData) : action(formData)));
+  };
 
   if (state.step === "choose") {
     return (
@@ -130,25 +110,41 @@ function PhoneCodeForm({ defaultCountry }: { defaultCountry: string }) {
   }
 
   return (
-    <form action={action} className="login-form">
+    <form onSubmit={submit} className="login-form">
       <input type="hidden" name="intent" value="send" />
-      <div className="field">
-        <label htmlFor="patient-phone">{d.login.phoneNumber}</label>
-        <PhoneInput
-          id="patient-phone"
+      <label className="field">
+        <span>{d.login.emailOrPhone}</span>
+        <input
           name="identifier"
-          country={country}
-          onCountryChange={setCountry}
-          defaultValue={state.identifier}
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          placeholder={d.login.emailOrPhonePlaceholder}
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
           required
           autoFocus
         />
-        <small className="form-note">{d.login.clinicNumber}</small>
-      </div>
-      {state.error && <p className="form-error">{state.error}</p>}
-      <button type="submit" className="btn btn-primary" disabled={pending}>
-        {pending ? d.login.sending : d.login.textMeCode}
+        <small className="form-note">
+          {d.login.patientPhoneNote} {d.login.emailOrPhoneNote}
+        </small>
+      </label>
+      {isEmail && (
+        <label className="field">
+          <span>{d.login.password}</span>
+          <input type="password" name="password" autoComplete="current-password" required />
+          <small className="form-note">{d.login.noPasswordYet}</small>
+        </label>
+      )}
+      {error && <p className="form-error">{error}</p>}
+      <button type="submit" className="btn btn-primary" disabled={busy}>
+        {isEmail ? (emailPending ? d.login.signingIn : d.login.signIn) : pending ? d.login.sending : d.login.textMeCode}
       </button>
+      {isEmail && (
+        <Link href="/reset-password" className="forgot-link">
+          {d.login.forgotPassword}
+        </Link>
+      )}
     </form>
   );
 }
