@@ -42,17 +42,15 @@ button { font: inherit; border: none; background: none; cursor: pointer; color: 
 .layout.collapsed .sidebar { margin-left: calc(-1 * var(--sidebar-w)); }
 
 .brand-link { display: block; }
-.brand { display: flex; align-items: center; gap: 10px; padding: 18px 16px 26px; }
-.brand-logo { width: auto; height: 42px; object-fit: contain; }
-.brand-text { display: flex; flex-direction: column; justify-content: center; gap: 2px; }
-.brand-name { font-weight: 700; font-size: 20px; letter-spacing: -0.2px; line-height: 1.1; color: var(--brand-teal); }
-.brand-name-mi { color: var(--brand-navy); }
-.brand-tagline { font-size: 11px; color: var(--muted); letter-spacing: 0.2px; }
+.brand { display: flex; align-items: center; padding: 18px 16px 26px; }
+.brand-logo { display: block; height: auto; max-width: 100%; }
+/* Sidebar: the wordmark alone. */
+.brand-logo-wordmark { width: 196px; }
+/* Sign-in screens and invoices: the full logo with its taglines. */
+.brand-logo-full { width: 240px; }
 
 .brand-stacked { flex-direction: column; align-items: center; gap: 14px; text-align: center; }
-.brand-stacked .brand-logo { height: 96px; }
-.brand-stacked .brand-name { font-size: 30px; }
-.brand-stacked .brand-tagline { font-size: 13px; }
+.brand-stacked .brand-logo-full { width: 300px; }
 
 .divider {
   border: none;

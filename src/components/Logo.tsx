@@ -1,20 +1,22 @@
 type Props = {
-  /** Stack the mark above the wordmark (login screens, print headers). */
+  /** Centre the logo (sign-in screens, print headers). */
   stacked?: boolean;
-  /** Show the "Care across Africa" strapline under the wordmark. */
+  /** The full logo with its taglines ("Care · Consult · Connect", "Your Digital Health Partner"). */
   tagline?: boolean;
 };
 
+/**
+ * The MiDokta logo. The full logo carries its taglines; where space is tight (the sidebar) the
+ * "MiDokta" wordmark alone is shown. Source: public/logo.jpeg, trimmed into logo.png and logo-wordmark.png.
+ */
 export default function Logo({ stacked = false, tagline = false }: Props) {
   return (
     <span className={`brand${stacked ? " brand-stacked" : ""}`}>
-      <img src="/logo-mark.png" alt="" className="brand-logo" />
-      <span className="brand-text">
-        <span className="brand-name">
-          <span className="brand-name-mi">Mi</span>Dokta
-        </span>
-        {tagline && <span className="brand-tagline">Care across Africa</span>}
-      </span>
+      {tagline ? (
+        <img src="/logo.png" alt="MiDokta: Care, Consult, Connect. Your Digital Health Partner" className="brand-logo brand-logo-full" width={720} height={249} />
+      ) : (
+        <img src="/logo-wordmark.png" alt="MiDokta" className="brand-logo brand-logo-wordmark" width={560} height={111} />
+      )}
     </span>
   );
 }
